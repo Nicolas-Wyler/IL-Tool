@@ -299,3 +299,10 @@ body.touch-input .app-brand .file-controls .icon-button.touch-pressed { backgrou
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
+
+.speed-controls { position: relative; }
+.speed-controls::after { content: ''; position: absolute; left: calc(50% - 1px); top: 1px; bottom: 1px; width: 1px; background: #383b44; pointer-events: none; }
+@media (hover: hover) {
+  body:not(.touch-input) .speed-controls:has(button:not(:disabled):hover)::after { background: #a2b5ff; }
+}
+body.touch-input .speed-controls:has(button:not(:disabled):active, button.touch-pressed)::after { background: #a2b5ff; }
