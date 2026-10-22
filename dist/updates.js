@@ -1,5 +1,5 @@
 // Bump this and the service-worker cache name for every published release.
-const VERSION = 'plane-wave-v30-local';
+const VERSION = 'plane-wave-v31-local';
 const VERSION_KEY = 'plane-wave-version';
 const STATE_KEY = 'plane-wave-update-state';
 

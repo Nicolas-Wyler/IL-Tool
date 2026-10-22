@@ -175,3 +175,9 @@ input[type=checkbox]:hover { outline: 2px solid #a2b5ff; outline-offset: 2px; }
 .field-surface:hover, .placeholder-square:hover { outline: 1px solid #91adff80; outline-offset: -1px; }
 
 #update { margin-left: auto; font-size: 14px; }
+
+.app-brand .file-controls { margin-left: auto; font-size: 14px; }
+.app-brand #update { margin-left: 0; }
+.unified-master { grid-template-columns: repeat(3, minmax(0, 200px)); }
+@media (max-width: 600px) { .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 380px) { .app-brand .file-controls button { min-width: 0; padding: 8px; } }
