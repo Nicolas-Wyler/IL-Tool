@@ -121,7 +121,7 @@ function render() {
   context.putImageData(pixels, 0, 0);
   document.querySelector('#intensity-max').textContent = '1';
   canvas.parentElement.dataset.view = mode;
-  document.querySelector('#intensity-label').textContent = mode === 'realSquared' ? '[Re(Ẽ)]² (a.u.)' : '|Ẽ|² (a.u.)';
+  document.querySelector('#intensity-label').textContent = mode === 'realSquared' ? '[Re(Ẽ)]² [a.u.]' : '|Ẽ|² [a.u.]';
   document.querySelector('#brightness-legend').hidden = mode === 'phase';
   document.querySelector('#phase-legend').hidden = mode === 'intensity' || mode === 'realSquared';
   canvas.setAttribute('aria-label', `${view.selectedOptions[0].textContent} heatmap, ${bounds.width} nm square, ${parameters.waves.length} waves`);

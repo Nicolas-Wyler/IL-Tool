@@ -23,10 +23,11 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
   function controls() {
     selectButton.setAttribute('aria-pressed', String(selecting));
     document.querySelector('#add').disabled = selecting;
+    document.querySelector('#add').hidden = selecting;
     table.classList.toggle('selecting-rows', selecting);
-    for (const button of Object.values(actionButtons)) button.hidden = !selecting;
     actionButtons.copy.disabled = actionButtons.duplicate.disabled = actionButtons.delete.disabled = checkedRows().length === 0;
     actionButtons.paste.disabled = !rowClipboard?.values.length;
+    for (const button of Object.values(actionButtons)) button.hidden = !selecting || button.disabled;
   }
   function paintRows() {
     for (const row of body.rows) {
