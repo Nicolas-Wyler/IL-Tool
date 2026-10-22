@@ -14,7 +14,7 @@
 </head>
 <body>
   <main>
-    <header class="app-brand"><img src="./icon-192.png" width="28" height="28" alt=""><span>IL Tool</span></header>
+    <header class="app-brand"><img src="./icon-192.png" width="28" height="28" alt=""><span>IL Tool</span><button id="update" type="button" hidden>Update</button></header>
     <form id="parameters" autocomplete="off">
     <div class="master-controls unified-master">
       <label for="wavelength"><span class="field-label">Wavelength (nm)</span><input id="wavelength" name="wavelength" type="number" value="20" min="0" step="any" required></label>
@@ -36,7 +36,7 @@
         <button id="slower" type="button" aria-label="Slow down playback" title="Slower (½×)">−</button>
         <button id="faster" type="button" aria-label="Speed up playback" title="Faster (2×)">+</button>
       </div>
-      <button id="play" type="button" aria-pressed="false">Play</button>
+      <button id="play" type="button" aria-pressed="false">Run</button>
     </div>
 </div>
     <div class="plots">
@@ -53,7 +53,7 @@
         <div class="field-surface"><canvas id="field" width="640" height="640" role="img" aria-label="Complex field heatmap"></canvas>      <div class="legends">
         <div class="legend" id="brightness-legend">
           <div class="ramp"></div>
-          <div class="ends"><span>0.00</span><span id="intensity-label">|Ẽ|² (a.u.)</span><span id="intensity-max">1.00</span></div>
+          <div class="ends"><span>0</span><span id="intensity-label">|Ẽ|² (a.u.)</span><span id="intensity-max">1</span></div>
         </div>
         <div class="legend" id="phase-legend">
           <div class="ramp phase"></div>

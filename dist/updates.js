@@ -1,10 +1,12 @@
 // Bump this and the service-worker cache name for every published release.
-const VERSION = 'plane-wave-v28-local';
+const VERSION = 'plane-wave-v30-local';
 const VERSION_KEY = 'plane-wave-version';
 const STATE_KEY = 'plane-wave-update-state';
 
 export function setupUpdates({ capture, restore }) {
   let refreshing = false;
+  const updateButton = document.querySelector('#update');
+  const localDevelopment = ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
   const reload = () => {
     if (refreshing) return;
     refreshing = true;
@@ -31,7 +33,7 @@ export function setupUpdates({ capture, restore }) {
     requestAnimationFrame(() => { toast.textContent = 'Updated'; });
     setTimeout(() => toast.remove(), 2500);
   }
-  if (['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)) {
+  if (localDevelopment) {
     let revision = null;
     let checking = false;
     const check = async () => {
@@ -59,6 +61,24 @@ export function setupUpdates({ capture, restore }) {
     reload();
   });
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(registration => {
+    const ready = () => {
+      const waiting = registration.waiting;
+      const available = Boolean(waiting && navigator.serviceWorker.controller);
+      if (available && localDevelopment) { waiting.postMessage({ type: 'SKIP_WAITING' }); return; }
+      updateButton.hidden = !available;
+      updateButton.disabled = false;
+    };
+    updateButton.addEventListener('click', () => {
+      if (!registration.waiting) { updateButton.hidden = true; return; }
+      updateButton.disabled = true;
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    });
+    const watch = worker => {
+      worker?.addEventListener('statechange', () => { if (['installed', 'activated', 'redundant'].includes(worker.state)) ready(); });
+    };
+    registration.addEventListener('updatefound', () => watch(registration.installing));
+    navigator.serviceWorker.addEventListener('controllerchange', ready);
+    watch(registration.installing); ready();
     const check = () => {
       if (document.visibilityState === 'visible') registration.update().catch(() => {});
     };

@@ -30,7 +30,6 @@ const pixels = context.createImageData(canvas.width, canvas.height);
 const real = new Float64Array(canvas.width * canvas.height);
 const imaginary = new Float64Array(canvas.width * canvas.height);
 const palette = Array.from({ length: 4096 }, (_, i) => phaseRGB(TAU * i / 4096));
-const number = new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
 let fieldViewport, parameters, gratings, table, history;
 setupNumbers();
 let timeSeconds = 0, running = false, lastFrame = null, frameId = null, playbackSpeed = 1;
@@ -135,7 +134,8 @@ function render() {
       pixels.data[offset + 3] = 255;
   }
   context.putImageData(pixels, 0, 0);
-  document.querySelector('#intensity-max').textContent = number.format(ceiling);
+  document.querySelector('#intensity-max').textContent = '1';
+  canvas.parentElement.dataset.view = mode;
   document.querySelector('#intensity-label').textContent = mode === 'realSquared' ? '[Re(Ẽ)]² (a.u.)' : '|Ẽ|² (a.u.)';
   document.querySelector('#brightness-legend').hidden = mode === 'phase';
   document.querySelector('#phase-legend').hidden = mode === 'intensity' || mode === 'realSquared';
@@ -159,7 +159,7 @@ function stop() {
   cancelAnimationFrame(frameId);
   frameId = null;
   lastFrame = null;
-  play.textContent = 'Play';
+  play.textContent = 'Run';
   play.setAttribute('aria-pressed', 'false');
 }
 
@@ -188,7 +188,8 @@ function update() {
   if (readParameters()) render();
   gratings?.render();
 }
-function addWave(saved = {}) {
+function addWave(saved) {
+  if (!saved) saved = waveList.lastElementChild ? captureRow(waveList.lastElementChild) : {};
   const row = waveTemplate.cloneNode(true), id = nextWaveId++;
   row.setAttribute('aria-label', `Row ${id}`);
   row.dataset.angleSign = saved.angleSign ?? (Number(saved.theta ?? 30) < 0 ? -1 : 1);
@@ -204,6 +205,7 @@ function addWave(saved = {}) {
   row.querySelector('[data-remove-row]').setAttribute('aria-label', `Remove row ${id}`);
   waveList.append(row);
   syncRows(); formatNumbers(row); syncSelection();
+  return row;
 }
 waveList.replaceChildren();
 document.querySelector('#add').addEventListener('click', () => { addWave(); recolorRows(); update(); history?.checkpoint(); });
@@ -240,7 +242,19 @@ fieldViewport = setupViewport(document.querySelector('.field-surface'), {
 });
 table = setupTable(document.querySelector('#wave-table'), {
   addRow: () => { addWave(); recolorRows(); },
-  removeRows: rows => { rows.forEach(row => row.remove()); recolorRows(); syncSelection(); }
+  removeRows: rows => { rows.forEach(row => row.remove()); recolorRows(); syncSelection(); },
+  duplicateRows: rows => {
+    const copies = rows.map(row => ({ source: row, values: captureRow(row) }));
+    waveList.querySelectorAll('.row-select').forEach(input => { input.checked = false; });
+    copies.forEach(({ source, values }) => source.after(addWave({ ...values, selected: true })));
+    recolorRows(); syncSelection();
+  },
+  insertRows: (values, index) => {
+    const before = waveList.children[index] ?? null;
+    waveList.querySelectorAll('.row-select').forEach(input => { input.checked = false; });
+    values.forEach(value => waveList.insertBefore(addWave({ ...value, selected: true }), before));
+    recolorRows(); syncSelection();
+  }
 });
 gratings = setupGratings({ getRows: () => captureRows().map(row => ({ ...row, gratingAzimuth: gratingAzimuth(row) })) });
 const state = {

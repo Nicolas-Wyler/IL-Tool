@@ -158,3 +158,20 @@ input[type=checkbox] { width: 16px; height: 16px; margin: 0; padding: 0; vertica
   .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .file-controls { grid-column: 1 / -1; }
 }
+
+/* Keep both ramps touching, with complex-view labels outside the pair. */
+.field-surface .legends { gap: 0; }
+.field-surface[data-view=complex] #brightness-legend { display: flex; flex-direction: column; }
+.field-surface[data-view=complex] #brightness-legend .ends { order: -1; margin: 0 0 3px; }
+button:not(:disabled):hover { filter: brightness(1.16); border-color: #a2b5ff; }
+select:hover, input:not([readonly]):not(:disabled):hover { border-color: #91adff; background-color: #242a37; }
+.parameter-table td:not(.derived):hover { background-color: #2c3548; }
+.row-color:hover { box-shadow: 0 0 0 2px #a2b5ff; }
+input[type=checkbox]:hover { outline: 2px solid #a2b5ff; outline-offset: 2px; }
+#edit-mode:hover { background: #4b5b7e; }
+.viewport-home:not(:disabled):hover { background: #53617ed9; }
+
+.parameter-table td.derived:hover { background-color: #202838; }
+.field-surface:hover, .placeholder-square:hover { outline: 1px solid #91adff80; outline-offset: -1px; }
+
+#update { margin-left: auto; font-size: 14px; }

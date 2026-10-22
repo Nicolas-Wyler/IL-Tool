@@ -1,4 +1,4 @@
-import { numberText, setNumber, formatNumbers } from './numbers.js';
+import { numberText, setNumber } from './numbers.js';
 export function cellRange(anchor, end) {
   return { top: Math.min(anchor.row, end.row), bottom: Math.max(anchor.row, end.row),
     left: Math.min(anchor.col, end.col), right: Math.max(anchor.col, end.col) };
@@ -8,13 +8,17 @@ export function parseCells(text) {
   return text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').map(line => line.split('\t'));
 }
 
+export function rowPasteAssignments(targets, sourceCount) {
+  return targets.map((target, index) => ({ target, source: index % sourceCount }));
+}
+
 // Checkbox selection acts on rows; cell selection acts on a rectangular range.
-export function setupTable(table, { addRow, removeRows }) {
+export function setupTable(table, { addRow, removeRows, duplicateRows, insertRows }) {
   const body = table.tBodies[0];
-  let anchor = null, end = null, editing = null, original = '', rowAction = false;
+  let anchor = null, end = null, editing = null, original = '', rowInsertion = null, rowClipboard = null;
   const checkedRows = () => [...body.rows].filter(row => row.querySelector('.row-select')?.checked);
   table.addEventListener('change', event => {
-    if (event.target.matches('input[type=checkbox]')) { stopEditing(); rowAction = true; anchor = end = null; paint(); }
+    if (event.target.matches('input[type=checkbox]')) { stopEditing(); anchor = end = null; paint(); }
   });
   const rows = () => [...body.rows].map(row => [...row.querySelectorAll('input[type="number"]')]);
   const writable = input => input.dataset.derived !== 'true';
@@ -46,7 +50,7 @@ export function setupTable(table, { addRow, removeRows }) {
     if (!end) rows()[0]?.[0]?.closest('td').setAttribute('tabindex', '0');
   }
   function select(point, extend = false) {
-    rowAction = false;
+    rowInsertion = null;
     if (!extend || !anchor) anchor = point;
     end = point;
     paint();
@@ -108,21 +112,6 @@ export function setupTable(table, { addRow, removeRows }) {
   });
   table.addEventListener('keydown', event => {
     if (event.target.matches('input[type="color"], button')) return;
-    if (rowAction && checkedRows().length) {
-      const command = event.metaKey || event.ctrlKey, key = event.key.toLowerCase();
-      if (command && key === 'a') {
-        event.preventDefault();
-        const all = table.querySelector('#select-all'); all.checked = true; all.dispatchEvent(new Event('change', { bubbles: true }));
-      } else if (event.key === 'Backspace' || event.key === 'Delete') {
-        event.preventDefault(); removeRows(checkedRows()); notify();
-      } else if (command && key === 'd') {
-        event.preventDefault();
-        const selected = checkedRows().map(row => [...row.querySelectorAll('input[type="number"]')]);
-        selected.slice(1).forEach(cells => cells.forEach((input, col) => { if (writable(input)) setNumber(input, numberText(selected[0][col])); }));
-        notify();
-      }
-      return;
-    }
     if (event.target.matches('input[type="checkbox"]')) return;
     if (!end) {
       const point = locate(event.target);
@@ -189,13 +178,81 @@ export function setupTable(table, { addRow, removeRows }) {
       edit(end, '');
     }
   });
-  for (const type of ['copy', 'cut']) table.addEventListener(type, event => {
-    if (rowAction && checkedRows().length && event.clipboardData) {
-      event.preventDefault();
-      event.clipboardData.setData('text/plain', checkedRows().map(row => [...row.querySelectorAll('input[type="number"]')].map(numberText).join('\t')).join('\n'));
-      if (type === 'cut') { removeRows(checkedRows()); notify(); }
-      return;
+  const rowContext = event => table.contains(event.target)
+    || !event.target.closest?.('input, textarea, select, [contenteditable=true]');
+  const rowValues = row => ({
+    ...Object.fromEntries([...row.querySelectorAll('input[type="number"]')].map(input => [input.name, numberText(input)])),
+    angleSign: Number(row.dataset.angleSign) || 1
+  });
+  const names = () => rows()[0]?.map(input => input.name) ?? ['theta', 'phase', 'pitch', 'efficiency', 'azimuth', 'radius'];
+  function removeSelected() {
+    const selected = checkedRows();
+    rowInsertion = [...body.rows].indexOf(selected[0]);
+    removeRows(selected); anchor = end = null; paint(); notify();
+  }
+  document.addEventListener('keydown', event => {
+    if (!checkedRows().length || !rowContext(event) || event.altKey || event.isComposing) return;
+    const command = event.metaKey || event.ctrlKey, key = event.key.toLowerCase();
+    if (command && key === 'a') {
+      event.preventDefault(); event.stopPropagation(); stopEditing();
+      const all = table.querySelector('#select-all');
+      all.checked = true; all.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (command && key === 'd') {
+      event.preventDefault(); event.stopPropagation(); stopEditing();
+      if (!event.repeat) { duplicateRows(checkedRows()); anchor = end = null; paint(); notify(); }
+    } else if (!editing && !command && (key === 'backspace' || key === 'delete')) {
+      event.preventDefault(); event.stopPropagation(); removeSelected();
     }
+  }, true);
+  for (const type of ['copy', 'cut']) document.addEventListener(type, event => {
+    if (!checkedRows().length || !rowContext(event) || !event.clipboardData) return;
+    event.preventDefault(); event.stopPropagation(); stopEditing();
+    const values = checkedRows().map(rowValues), columns = names();
+    const text = values.map(row => columns.map(name => row[name]).join('\t')).join('\n');
+    rowClipboard = { text, values };
+    if (type === 'copy') rowInsertion = null;
+    event.clipboardData.setData('text/plain', text);
+    event.clipboardData.setData('application/x-il-tool-rows', JSON.stringify(values));
+    if (type === 'cut') removeSelected();
+  }, true);
+  document.addEventListener('paste', event => {
+    if (!rowContext(event) || !event.clipboardData) return;
+    const text = event.clipboardData.getData('text/plain');
+    let copied = null;
+    try {
+      const data = JSON.parse(event.clipboardData.getData('application/x-il-tool-rows'));
+      if (Array.isArray(data) && data.length && data.every(row => row && names().every(name => typeof row[name] === 'string'
+          && (row[name].trim() === '' || Number.isFinite(Number(row[name])))))) copied = data;
+    } catch {}
+    if (!copied && rowClipboard?.text === text) copied = rowClipboard.values;
+    const selected = checkedRows();
+    if (!selected.length && !copied) return;
+    const values = parseCells(text);
+    if (values.some(row => row.some(value => value.trim() !== '' && !Number.isFinite(Number(value))))) return;
+    event.preventDefault(); event.stopPropagation(); stopEditing();
+    const columns = names();
+    const incoming = copied ?? values.map(values => Object.fromEntries(columns.map((name, i) => [name, values[i]?.trim() ?? ''])));
+    if (!selected.length) {
+      const index = rowInsertion ?? (end ? end.row + 1 : body.rows.length);
+      insertRows(incoming, index); rowInsertion = null;
+    } else {
+      const assignments = rowPasteAssignments(selected.map(row => [...body.rows].indexOf(row)), incoming.length);
+      for (const { target, source } of assignments) {
+        const row = body.rows[target], data = incoming[source];
+        const single = !copied && values.length === 1 && values[0].length === 1;
+        for (const input of row.querySelectorAll('input[type="number"]')) {
+          if (writable(input)) setNumber(input, single ? values[0][0].trim() : data[input.name] ?? '');
+        }
+        if (!single && data.theta !== '' && Number.isFinite(Number(data.theta))) row.dataset.angleSign = Number(data.theta) < 0 ? -1 : 1;
+      }
+      if (incoming.length > selected.length) {
+        const index = [...body.rows].indexOf(selected.at(-1)) + 1;
+        insertRows(incoming.slice(selected.length), index);
+      }
+    }
+    anchor = end = null; paint(); notify();
+  }, true);
+  for (const type of ['copy', 'cut']) table.addEventListener(type, event => {
     if (editing || !anchor || !end || !event.clipboardData) return;
     event.preventDefault();
     const range = cellRange(anchor, end), grid = rows();
@@ -206,23 +263,6 @@ export function setupTable(table, { addRow, removeRows }) {
   });
   table.addEventListener('paste', event => {
     if (!event.clipboardData) return;
-    if (rowAction && checkedRows().length) {
-      event.preventDefault();
-      const values = parseCells(event.clipboardData.getData('text/plain'));
-      if (values.some(row => row.some(value => value.trim() !== '' && !Number.isFinite(Number(value))))) return;
-      const targets = checkedRows().map(row => [...body.rows].indexOf(row));
-      const start = targets[0];
-      while (rows().length < start + values.length) addRow();
-      const grid = rows();
-      const single = values.length === 1 && values[0].length === 1;
-      const count = single ? targets.length : values.length;
-      for (let i = 0; i < count; i++) {
-        const row = single ? targets[i] : targets[i] ?? start + i;
-        const cells = single ? grid[row].map(() => values[0][0]) : values[i];
-        cells.forEach((value, col) => { if (grid[row]?.[col] && writable(grid[row][col])) setNumber(grid[row][col], value.trim()); });
-      }
-      notify(); return;
-    }
     if (!anchor || !end) return;
     const text = event.clipboardData.getData('text/plain');
     if (editing) {

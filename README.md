@@ -8,6 +8,6 @@ Install from Chrome, or use Safari → Share → Add to Home Screen on iPhone. O
 
 Run locally: `python3 serve_local.py` → <http://127.0.0.1:8769/>. Saved edits refresh the local app automatically. Pushes to `main` deploy to GitHub Pages.
 
-Shortcuts: Cmd/Ctrl+S saves; Cmd/Ctrl+O loads.
+Shortcuts: Cmd/Ctrl+S saves; Cmd/Ctrl+O loads. Cmd/Ctrl+C/V/X/D copies/pastes/cuts/duplicates checked rows. Available updates appear beside the title.
 
 Check: `for test in tests/*.test.mjs; do node "$test" || exit; done`.

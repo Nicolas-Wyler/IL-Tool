@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { zoomAt, scaleLength, MIN_ZOOM, MAX_ZOOM } from '../dist/viewport.js';
+import { zoomAt, scaleLength, scaleLabel, transitionView, MIN_ZOOM, MAX_ZOOM } from '../dist/viewport.js';
 import { fillSuperposition, superpositionAt } from '../dist/field.js';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
@@ -26,3 +26,12 @@ for (let y = 0; y < 4; y++) for (let x = 0; x < 5; x++) {
   near(imaginary[y * 5 + x], expected.im);
 }
 console.log('Passed: cursor-anchored zoom, zoom bounds, scale bars, and physically sampled panned fields.');
+
+assert.equal(scaleLabel(.2, 'nm'), '200 pm');
+assert.equal(scaleLabel(.02, 'µm'), '20 nm');
+assert.equal(scaleLabel(1000, 'µm'), '1000 µm');
+const from = { zoom: 4, x: 500, y: -30 }, to = { zoom: 1, x: 0, y: 0 };
+assert.deepEqual(transitionView(from, to, 0), from);
+assert.deepEqual(transitionView(from, to, 1), to);
+const nearTrip = transitionView(from, to, .5), farTrip = transitionView({ ...from, x: 50000 }, to, .5);
+near(nearTrip.x / 500, farTrip.x / 50000);

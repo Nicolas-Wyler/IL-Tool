@@ -21,9 +21,12 @@ history.undo(); assert.equal(state.value, 2);
 state.value = 4; history.redo(); assert.equal(state.value, 4); // An uncommitted edit invalidates redo.
 
 assert.equal(formatNumber('23.0940107676'), '23.09');
-assert.equal(formatNumber('20'), '20.00');
+assert.equal(formatNumber('20'), '20.0');
 assert.equal(formatNumber(''), '');
-assert.equal(formatNumber('.00001'), '1.00e-5');
+assert.equal(formatNumber('1.2'), '1.2');
+assert.equal(formatNumber('1.23'), '1.23');
+assert.equal(formatNumber('1.299'), '1.3');
+assert.equal(formatNumber('.00001'), '1.0e-5');
 assert.equal(numberValue({ value: '23.09', dataset: { rawValue: '23.0940107676' } }), 23.0940107676);
 
 const rows = defaultRows().map(row => {

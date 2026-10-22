@@ -6,8 +6,9 @@ export function numberValue(input) {
 export function formatNumber(value) {
   if (String(value).trim() === '' || !Number.isFinite(Number(value))) return '';
   const number = Number(value);
-  return number !== 0 && (Math.abs(number) < .005 || Math.abs(number) >= 1e21)
+  const formatted = number !== 0 && (Math.abs(number) < .005 || Math.abs(number) >= 1e21)
     ? number.toExponential(2) : (Object.is(number, -0) ? 0 : number).toFixed(2);
+  return formatted.replace(/(\.\d)0(?=e|$)/, '$1');
 }
 export function setNumber(input, value) {
   input.dataset.rawValue = String(value ?? '');
