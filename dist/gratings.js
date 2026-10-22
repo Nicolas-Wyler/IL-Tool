@@ -1,5 +1,5 @@
 import { numberValue } from './numbers.js';
-import { maskBounds, maskWidth, centerIfFits } from './framing.js';
+import { maskBounds, maskWidth, maskViewCenter } from './framing.js';
 import { setupViewport } from './viewport.js';
 import { gratingSquare } from './grating-geometry.js';
 import { fillCenterSquares } from './center-squares.js';
@@ -43,7 +43,7 @@ export function setupGratings({ getRows }) {
   const context = centerCanvas.getContext('2d', { alpha: false });
   const pixels = context.createImageData(640, 640);
   const geometry = () => maskBounds(getRows(), numberValue(wavelength), numberValue(workingDistance), numberValue(gratingWidth));
-  const viewport = setupViewport(plot, { getWidth: () => maskWidth(geometry()), recenter: bounds => centerIfFits(geometry(), bounds.width), unit: 'µm', render });
+  const viewport = setupViewport(plot, { getWidth: () => maskWidth(geometry()), recenter: bounds => maskViewCenter(geometry(), bounds), minZoom: .5, elasticZoom: true, unit: 'µm', render });
   function render() {
     svg.replaceChildren();
     context.fillStyle = 'black';
@@ -78,7 +78,7 @@ export function setupGratings({ getRows }) {
     context.putImageData(pixels, 0, 0);
     plot.setAttribute('aria-label', `Grating layout: ${count} squares, ${side} µm square view`);
   }
-  return { render,
+  return { render, bounds: viewport.bounds,
     capture: () => ({ viewport: viewport.capture() }),
     restore: saved => {
       viewport.restore(saved?.viewport);

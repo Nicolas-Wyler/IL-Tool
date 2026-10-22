@@ -25,6 +25,17 @@ export function centerIfFits(bounds, visibleWidth) {
   return bounds.maxX - bounds.minX <= visibleWidth && bounds.maxY - bounds.minY <= visibleWidth
     ? { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 } : null;
 }
+export function maskViewCenter(bounds, view) {
+  const center = centerIfFits(bounds, view.width);
+  if (center) return center;
+  if (!(view.width > 0) || ![view.width, view.x, view.y, ...Object.values(bounds)].every(Number.isFinite)) return null;
+  const limit = (position, low, high) => {
+    const overlap = Math.min(view.width * .1, high - low);
+    return Math.max(low - view.width / 2 + overlap, Math.min(high + view.width / 2 - overlap, position));
+  };
+  const x = limit(view.x, bounds.minX, bounds.maxX), y = limit(view.y, bounds.minY, bounds.maxY);
+  return x !== view.x || y !== view.y ? { x, y } : null;
+}
 export function interferenceWidth(waves, wavelength) {
   const vectors = waves.filter(wave => wave.amplitude > 0 && [wave.theta, wave.azimuth].every(Number.isFinite)).map(inPlaneWavevector);
   let separation = 0, magnitude = 0;
@@ -34,6 +45,6 @@ export function interferenceWidth(waves, wavelength) {
   }
   const threshold = TAU / wavelength * 1e-12;
   const frequency = separation > threshold ? separation : magnitude > threshold ? magnitude : TAU / wavelength;
-  const width = 5 * TAU / frequency;
-  return Number.isFinite(width) && width > 0 ? width : 100;
+  const width = 10 * TAU / frequency;
+  return Number.isFinite(width) && width > 0 ? width : 200;
 }

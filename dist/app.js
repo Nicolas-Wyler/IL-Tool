@@ -1,3 +1,6 @@
+import { setupPageControls } from './page-controls.js';
+import { setupExport } from './exports.js';
+import { setupPreferences, DEFAULT_RESOLUTION, validResolution } from './preferences.js';
 import { setupFileControls } from './settings.js';
 import { numberText, numberValue, setNumber, formatNumbers, setupNumbers } from './numbers.js';
 import { createHistory } from './history.js';
@@ -7,18 +10,18 @@ import { setupViewport } from './viewport.js';
 import { setupTable } from './table.js';
 import { setupGratings } from './gratings.js';
 import { setupUpdates } from './updates.js';
-import { LIGHT_SPEED, TAU, fillSuperposition, phaseRGB } from './field.js';
+import { LIGHT_SPEED, fillSuperposition, colorField } from './field.js';
 
 import { linkRow, waveFromRow, gratingAzimuth, defaultRows, normalizeLinkedState } from './linked-rows.js';
 
-const DEFAULT_PRESET = '2026-10-22-unified-screenshot';
+const DEFAULT_PRESET = '2026-10-22-contact-holes';
 const form = document.querySelector('#parameters');
 const waveList = document.querySelector('#waves');
 const waveTemplate = waveList.firstElementChild.cloneNode(true);
 const wavelengthInput = document.querySelector('#wavelength');
 const workingDistance = document.querySelector('#working-distance');
 const gratingWidth = document.querySelector('#grating-width');
-const selectAll = document.querySelector('#select-all');
+const projectName = document.querySelector('#project-name');
 const modeSwitch = document.querySelector('#edit-mode');
 const view = document.querySelector('#view');
 const play = document.querySelector('#play');
@@ -29,11 +32,11 @@ const context = canvas.getContext('2d', { alpha: false });
 const pixels = context.createImageData(canvas.width, canvas.height);
 const real = new Float64Array(canvas.width * canvas.height);
 const imaginary = new Float64Array(canvas.width * canvas.height);
-const palette = Array.from({ length: 4096 }, (_, i) => phaseRGB(TAU * i / 4096));
 let fieldViewport, parameters, gratings, table, history;
 setupNumbers();
 let timeSeconds = 0, running = false, lastFrame = null, frameId = null, playbackSpeed = 1;
 let nextWaveId = 1, editMode = 'wave';
+let exportResolution = DEFAULT_RESOLUTION;
 const rowNames = ['theta', 'phase', 'pitch', 'efficiency', 'azimuth', 'radius'];
 const colorAt = hue => {
   hue = ((hue % 6) + 6) % 6;
@@ -56,7 +59,7 @@ function recolorRows() {
 function captureRows() {
   return [...waveList.children].map(row => ({
     ...Object.fromEntries(rowNames.map(name => [name, numberText(row.querySelector(`[name="${name}"]`))])),
-    color: row.querySelector('.row-color').value, selected: row.querySelector('.row-select').checked, angleSign: Number(row.dataset.angleSign) || 1
+    color: row.querySelector('.row-color').value, selected: row.dataset.selected === 'true', angleSign: Number(row.dataset.angleSign) || 1
   }));
 }
 function syncRows() {
@@ -113,26 +116,7 @@ function render() {
   fieldViewport.refresh();
   const bounds = fieldViewport.bounds();
   fillSuperposition(real, imaginary, canvas.width, canvas.height, bounds.width, timeSeconds, parameters.waves, bounds.x, bounds.y);
-  for (let index = 0; index < real.length; index++) {
-      const re = real[index], im = imaginary[index];
-      const rawIntensity = re * re + im * im;
-      // Suppress roundoff at exact cancellation, where phase is undefined.
-      const intensity = rawIntensity > ceiling * 1e-24 ? rawIntensity : 0;
-      const offset = index * 4;
-      if (mode === 'complex' || mode === 'phase') {
-        const brightness = intensity === 0 ? 0 : mode === 'complex' ? Math.min(1, intensity / ceiling) : 1;
-        const turn = ((Math.atan2(im, re) / TAU) % 1 + 1) % 1;
-        const color = palette[Math.floor(turn * palette.length)];
-        pixels.data[offset] = Math.round(color[0] * brightness);
-        pixels.data[offset + 1] = Math.round(color[1] * brightness);
-        pixels.data[offset + 2] = Math.round(color[2] * brightness);
-      } else {
-        const value = mode === 'intensity' ? intensity : intensity === 0 ? 0 : re * re;
-        const gray = Math.round(255 * Math.min(1, value / ceiling));
-        pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = gray;
-      }
-      pixels.data[offset + 3] = 255;
-  }
+  colorField(real, imaginary, mode, ceiling, pixels.data);
   context.putImageData(pixels, 0, 0);
   document.querySelector('#intensity-max').textContent = '1';
   canvas.parentElement.dataset.view = mode;
@@ -200,8 +184,7 @@ function addWave(saved) {
     if (saved[input.name] !== undefined) setNumber(input, saved[input.name]);
   }
   row.querySelector('.row-color').value = saved.color ?? randomColor();
-  row.querySelector('.row-select').checked = Boolean(saved.selected);
-  row.querySelector('.row-select').setAttribute('aria-label', `Select row ${id}`);
+  row.dataset.selected = String(Boolean(saved.selected));
   row.querySelector('[data-remove-row]').setAttribute('aria-label', `Remove row ${id}`);
   waveList.append(row);
   syncRows(); formatNumbers(row); syncSelection();
@@ -226,17 +209,11 @@ form.addEventListener('input', update);
 view.addEventListener('change', render);
 document.addEventListener('visibilitychange', () => { lastFrame = null; });
 function syncSelection() {
-  const checks = [...waveList.querySelectorAll('.row-select')];
-  checks.forEach(input => input.closest('tr').classList.toggle('row-selected', input.checked));
-  selectAll.checked = checks.length > 0 && checks.every(input => input.checked);
-  selectAll.indeterminate = checks.some(input => input.checked) && !selectAll.checked;
-  selectAll.disabled = checks.length === 0;
+  for (const row of waveList.children) {
+    const selected = row.dataset.selected === 'true';
+    row.classList.toggle('row-selected', selected); row.setAttribute('aria-selected', String(selected));
+  }
 }
-selectAll.addEventListener('change', () => {
-  waveList.querySelectorAll('.row-select').forEach(input => { input.checked = selectAll.checked; });
-  syncSelection();
-});
-waveList.addEventListener('change', event => { if (event.target.matches('.row-select')) syncSelection(); });
 fieldViewport = setupViewport(document.querySelector('.field-surface'), {
   getWidth: () => interferenceWidth(captureRows().map(row => waveFromRow(row, numberValue(wavelengthInput))), numberValue(wavelengthInput)), unit: 'nm', render
 });
@@ -244,14 +221,14 @@ table = setupTable(document.querySelector('#wave-table'), {
   addRow: () => { addWave(); recolorRows(); },
   removeRows: rows => { rows.forEach(row => row.remove()); recolorRows(); syncSelection(); },
   duplicateRows: rows => {
-    const copies = rows.map(row => ({ source: row, values: captureRow(row) }));
-    waveList.querySelectorAll('.row-select').forEach(input => { input.checked = false; });
-    copies.forEach(({ source, values }) => source.after(addWave({ ...values, selected: true })));
+    const copies = rows.map(captureRow);
+    for (const row of waveList.children) row.dataset.selected = 'false';
+    copies.forEach(values => addWave({ ...values, selected: true }));
     recolorRows(); syncSelection();
   },
   insertRows: (values, index) => {
     const before = waveList.children[index] ?? null;
-    waveList.querySelectorAll('.row-select').forEach(input => { input.checked = false; });
+    for (const row of waveList.children) row.dataset.selected = 'false';
     values.forEach(value => waveList.insertBefore(addWave({ ...value, selected: true }), before));
     recolorRows(); syncSelection();
   }
@@ -263,18 +240,14 @@ const state = {
     wavelength: numberText(wavelengthInput), workingDistance: numberText(workingDistance), gratingWidth: numberText(gratingWidth),
     view: view.value, fieldViewport: fieldViewport.capture(),
     layoutViewport: gratings.capture().viewport,
-    timeSeconds, playbackSpeed, running
+    timeSeconds, playbackSpeed, running, exportResolution, projectName: projectName.value,
+    projectSavedFingerprint: projectName.dataset.savedFingerprint ?? null, selectionMode: table?.isSelecting() ?? false
   }),
   restore: saved => {
     saved = normalizeLinkedState(saved);
     if (!saved) return;
-    // Apply the explicitly requested screenshot defaults once on upgrade.
-    if (saved.presetVersion !== DEFAULT_PRESET) {
-      saved.rows = defaultRows(); saved.wavelength = '20'; saved.editMode = 'wave';
-      saved.timeSeconds = 0; saved.running = false;
-    }
     stop();
-    setNumber(wavelengthInput, saved.wavelength ?? '20');
+    setNumber(wavelengthInput, saved.wavelength ?? '3.1');
     setNumber(workingDistance, saved.workingDistance ?? '2000');
     setNumber(gratingWidth, saved.gratingWidth ?? '80');
     editMode = saved.editMode;
@@ -287,27 +260,48 @@ const state = {
     timeSeconds = saved.timeSeconds ?? 0;
     playbackSpeed = saved.playbackSpeed ?? 1;
     changeSpeed(1);
+    projectName.value = saved.projectName ?? 'Untitled';
+    exportResolution = validResolution(saved.exportResolution) ? saved.exportResolution : DEFAULT_RESOLUTION;
+    setNumber(document.querySelector('#export-resolution'), exportResolution);
+    projectName.dataset.savedFingerprint = saved.projectSavedFingerprint ?? '';
+    table.setSelectionMode(saved.selectionMode ?? false, false);
     update(); table.refresh(); syncSelection(); formatNumbers();
+    document.dispatchEvent(new Event('projectrestore'));
     if (saved.running && !play.disabled) play.click();
   }
 };
-state.restore({ schemaVersion: 3, rows: defaultRows() });
+state.restore({ schemaVersion: 3, rows: defaultRows(), wavelength: '3.1', editMode: 'pitch' });
 setupPersistence(state);
 setupUpdates(state);
 
 history = createHistory({
   capture: () => {
-    const { timeSeconds, running, playbackSpeed, fieldViewport, layoutViewport, ...parameters } = state.capture();
+    const { timeSeconds, running, playbackSpeed, fieldViewport, layoutViewport, projectSavedFingerprint, ...parameters } = state.capture();
     return parameters;
   },
-  restore: snapshot => state.restore({ ...state.capture(), ...snapshot })
+  restore: snapshot => state.restore({ ...state.capture(), ...snapshot }),
+  onChange: ({ canUndo, canRedo }) => {
+    document.querySelector('#undo').disabled = !canUndo;
+    document.querySelector('#redo').disabled = !canRedo;
+  }
+});
+document.querySelector('#undo').addEventListener('click', () => history.undo());
+document.querySelector('#redo').addEventListener('click', () => history.redo());
+document.querySelector('#refresh').addEventListener('click', () => {
+  table.refresh(); update(); formatNumbers();
+  document.dispatchEvent(new Event('checkupdates'));
 });
 document.addEventListener('tablecommit', () => history.checkpoint());
 document.addEventListener('change', () => history.checkpoint());
 document.addEventListener('keydown', event => {
+  if (document.querySelector('dialog[open]')) return;
   if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return;
   event.preventDefault(); event.stopPropagation();
   if (event.shiftKey) history.redo(); else history.undo();
 }, true);
 
 setupFileControls({ capture: state.capture, restore: saved => state.restore({ ...saved, presetVersion: DEFAULT_PRESET }), checkpoint: () => history.checkpoint() });
+setupExport({ capture: state.capture, fieldBounds: () => fieldViewport.bounds(), maskBounds: () => gratings.bounds(), valid: readParameters });
+setupPreferences({ getResolution: () => exportResolution, setResolution: value => { exportResolution = value; } });
+
+setupPageControls();

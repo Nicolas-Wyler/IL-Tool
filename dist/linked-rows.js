@@ -18,7 +18,7 @@ export function phaseFromPath(wavelengthNm, workingDistanceUm, theta) {
 export function linkRow(row, wavelength, workingDistance, mode) {
   const linked = { ...row };
   if (mode === 'pitch') {
-    const sign = row.angleSign === -1 || Number(row.theta) < 0 ? -1 : 1;
+    const sign = row.angleSign === -1 ? -1 : row.angleSign === 1 ? 1 : Number(row.theta) < 0 ? -1 : 1;
     const valid = numeric(row.pitch) && wavelength > 0 && Number(row.pitch) > wavelength;
     const theta = valid ? sign * Math.asin(wavelength / Number(row.pitch)) * 180 / Math.PI : NaN;
     linked.theta = display(theta);
@@ -47,9 +47,9 @@ export function waveFromRow(row, wavelength) {
 }
 
 export function defaultRows() {
-  return [0, 120, 240].flatMap(azimuth => [30, 60, -30, -60].map(theta => ({
-    theta: String(theta), phase: '0', pitch: '', efficiency: '1', azimuth: String(azimuth), angleSign: theta < 0 ? -1 : 1
-  })));
+  return [0, 60, 120, 180, 240, 300].map(azimuth => ({
+    theta: '', phase: '', pitch: '40', efficiency: '1', azimuth: String(azimuth), angleSign: 1
+  }));
 }
 
 export function normalizeLinkedState(saved) {

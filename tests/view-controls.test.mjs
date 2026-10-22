@@ -35,3 +35,5 @@ assert.deepEqual(transitionView(from, to, 0), from);
 assert.deepEqual(transitionView(from, to, 1), to);
 const nearTrip = transitionView(from, to, .5), farTrip = transitionView({ ...from, x: 50000 }, to, .5);
 near(nearTrip.x / 500, farTrip.x / 50000);
+
+near(zoomAt(view, .001, 0, 0, 100, .1).zoom, .1);

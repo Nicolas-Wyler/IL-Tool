@@ -72,3 +72,23 @@ export function phaseRGB(phase) {
   const colors = [[1,x,0], [x,1,0], [0,1,x], [0,x,1], [x,0,1], [1,0,x]];
   return colors[Math.floor(sector)].map(channel => Math.round(channel * 255));
 }
+
+const phasePalette = Array.from({ length: 4096 }, (_, i) => phaseRGB(TAU * i / 4096));
+
+export function colorField(real, imaginary, mode, ceiling, data) {
+  for (let index = 0; index < real.length; index++) {
+    const re = real[index], im = imaginary[index], raw = re * re + im * im;
+    const intensity = raw > ceiling * 1e-24 ? raw : 0, offset = index * 4;
+    if (mode === 'complex' || mode === 'phase') {
+      const brightness = intensity === 0 ? 0 : mode === 'complex' ? Math.min(1, intensity / ceiling) : 1;
+      const turn = ((Math.atan2(im, re) / TAU) % 1 + 1) % 1;
+      const color = phasePalette[Math.floor(turn * phasePalette.length)];
+      for (let channel = 0; channel < 3; channel++) data[offset + channel] = Math.round(color[channel] * brightness);
+    } else {
+      const value = mode === 'intensity' ? intensity : intensity === 0 ? 0 : re * re;
+      data[offset] = data[offset + 1] = data[offset + 2] = Math.round(255 * Math.min(1, value / ceiling));
+    }
+    data[offset + 3] = 255;
+  }
+  return data;
+}

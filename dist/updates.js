@@ -1,5 +1,6 @@
-// Bump this and the service-worker cache name for every published release.
-const VERSION = 'plane-wave-v31-local';
+import { APP_VERSION } from './preferences.js';
+// Bump APP_VERSION and the service-worker cache name for every published release.
+const VERSION = `plane-wave-${APP_VERSION}-local`;
 const VERSION_KEY = 'plane-wave-version';
 const STATE_KEY = 'plane-wave-update-state';
 
@@ -11,6 +12,7 @@ export function setupUpdates({ capture, restore }) {
     if (refreshing) return;
     refreshing = true;
     try { sessionStorage.setItem(STATE_KEY, JSON.stringify(capture())); } catch {}
+    document.dispatchEvent(new Event('projectreload'));
     location.reload();
   };
   let updated = false;
@@ -85,6 +87,7 @@ export function setupUpdates({ capture, restore }) {
     document.addEventListener('visibilitychange', check);
     window.addEventListener('focus', check);
     window.addEventListener('online', check);
+    document.addEventListener('checkupdates', () => { if (navigator.onLine) registration.update().catch(() => {}); });
     setInterval(check, 60_000);
     check();
   }).catch(error => console.error('Offline setup failed', error));

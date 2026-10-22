@@ -1,5 +1,5 @@
-const CACHE = 'plane-wave-v31-local';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './settings.js', './field.js', './updates.js', './gratings.js', './grating-geometry.js', './center-squares.js', './linked-rows.js', './numbers.js', './history.js', './framing.js', './persistence.js', './table.js', './viewport.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'plane-wave-1.0.39-local';
+const ASSETS = ['./', './index.html', './style.css', './app.js', './preferences.js', './exports.js', './export-data.js', './settings.js', './page-controls.js', './field.js', './updates.js', './gratings.js', './grating-geometry.js', './center-squares.js', './linked-rows.js', './numbers.js', './history.js', './framing.js', './persistence.js', './table.js', './viewport.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));

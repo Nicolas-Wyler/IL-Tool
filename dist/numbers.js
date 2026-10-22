@@ -8,7 +8,9 @@ export function formatNumber(value) {
   const number = Number(value);
   const formatted = number !== 0 && (Math.abs(number) < .005 || Math.abs(number) >= 1e21)
     ? number.toExponential(2) : (Object.is(number, -0) ? 0 : number).toFixed(2);
-  return formatted.replace(/(\.\d)0(?=e|$)/, '$1');
+  const [coefficient, exponent] = formatted.split('e');
+  const trimmed = coefficient.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  return exponent === undefined ? trimmed : `${trimmed}e${exponent}`;
 }
 export function setNumber(input, value) {
   input.dataset.rawValue = String(value ?? '');

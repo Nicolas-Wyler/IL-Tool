@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { serializeSettings, parseSettings } from '../dist/settings.js';
+import { serializeSettings, parseSettings, projectFingerprint, projectFilename } from '../dist/settings.js';
 const state = {
   schemaVersion: 3, autoFramingVersion: 1, paletteVersion: 1, presetVersion: '2026-10-22-unified-screenshot',
   editMode: 'pitch', wavelength: '13.51234567890123', workingDistance: '2000', gratingWidth: '80',
@@ -16,3 +16,15 @@ for (const invalid of ['{}', 'no json', JSON.stringify({ format:'Other', version
   assert.throws(() => parseSettings(invalid), /Invalid IL Tool/);
 }
 console.log('Passed: full settings round trip preserves raw precision, rows, colors, selection, mode, cameras, time, speed and playback; invalid files rejected.');
+
+const project = { ...state, projectName: 'My mask', exportResolution: 1024 };
+assert.equal(parseSettings(serializeSettings(project)).exportResolution, 1024);
+for (const exportResolution of [0, -1, 1.5, 4097, '640']) assert.throws(() => parseSettings(JSON.stringify({format:'IL Tool',version:1,settings:{...project,exportResolution}})));
+assert.equal(parseSettings(serializeSettings(project)).projectName, 'My mask');
+assert.equal(projectFilename(''), 'Untitled.iltool');
+assert.equal(projectFilename('My mask'), 'My mask.iltool');
+assert.equal(projectFilename('A/B'), 'A-B.iltool');
+assert.equal(projectFingerprint(project), projectFingerprint({ ...project, timeSeconds:99, running:false, selectionMode:true, rows:project.rows.map(row=>({...row,selected:false})) }));
+assert.notEqual(projectFingerprint(project), projectFingerprint({ ...project, wavelength:'9' }));
+assert.notEqual(projectFingerprint(project), projectFingerprint({ ...project, projectName:'Renamed' }));
+assert.equal(parseSettings(serializeSettings({ ...project, projectSavedFingerprint:'internal' })).projectSavedFingerprint, undefined);

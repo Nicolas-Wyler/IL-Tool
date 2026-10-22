@@ -29,8 +29,13 @@ assert.equal(linkRow({ pitch: '' }, 20, 2000, 'pitch').phase, '');
 assert.equal(linkRow({ theta: '', phase: '' }, 20, 2000, 'wave').pitch, '');
 near(phaseFromPath(20, 2000, 0), 0);
 near(phaseFromPath(20, 0, 30), 0);
-assert.equal(defaultRows().length, 12);
-assert.deepEqual(defaultRows().map(row => row.theta), ['30','60','-30','-60','30','60','-30','-60','30','60','-30','-60']);
+assert.equal(defaultRows().length, 6);
+assert.deepEqual(defaultRows().map(row => row.azimuth), ['0','60','120','180','240','300']);
+assert.ok(defaultRows().every(row => row.pitch === '40' && row.efficiency === '1'));
+const preset = linkRow(defaultRows()[0], 3.1, 2000, 'pitch');
+near(Number(preset.theta), 4.44, .005);
+near(Number(preset.phase), 202.35, .005);
+near(Number(preset.radius), 155.47, .005);
 const legacy = normalizeLinkedState({ schemaVersion: 2, wavelength: '20', waves: [['.5','-30','450','120']],
   gratings: { schemaVersion: 3, rows: [['64','.4','30','#123abc'],['80','.2','60','#abcdef']], fields: ['1500','50','3000'] } });
 assert.equal(legacy.rows.length, 2);
@@ -44,3 +49,6 @@ assert.equal(legacy.layoutWidth, '3000');
 const current = { schemaVersion: 3, editMode: 'pitch', rows: [{theta:'-30',phase:'20',pitch:'40',efficiency:'.4',azimuth:'120',color:'#123abc',angleSign:-1}] };
 assert.deepEqual(normalizeLinkedState(current), current);
 console.log('Passed: bidirectional pitch/angle links, optical-path phase and units, efficiency amplitude, inward propagation for both signs, defaults, and saved-state migration.');
+
+near(Number(linkRow({ pitch: '40', theta: '-30', angleSign: 1 }, 20, 2000, 'pitch').theta), 30);
+near(Number(linkRow({ pitch: '40', theta: '30', angleSign: -1 }, 20, 2000, 'pitch').theta), -30);

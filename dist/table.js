@@ -12,13 +12,42 @@ export function rowPasteAssignments(targets, sourceCount) {
   return targets.map((target, index) => ({ target, source: index % sourceCount }));
 }
 
-// Checkbox selection acts on rows; cell selection acts on a rectangular range.
+// Selection mode acts on rows; cell selection acts on a rectangular range.
 export function setupTable(table, { addRow, removeRows, duplicateRows, insertRows }) {
   const body = table.tBodies[0];
   let anchor = null, end = null, editing = null, original = '', rowInsertion = null, rowClipboard = null;
-  const checkedRows = () => [...body.rows].filter(row => row.querySelector('.row-select')?.checked);
-  table.addEventListener('change', event => {
-    if (event.target.matches('input[type=checkbox]')) { stopEditing(); anchor = end = null; paint(); }
+  let selecting = false, rowAnchor = null;
+  const checkedRows = () => [...body.rows].filter(row => row.dataset.selected === 'true');
+  const selectButton = document.querySelector('#select-rows');
+  const actionButtons = Object.fromEntries(['copy', 'paste', 'duplicate', 'delete'].map(name => [name, document.querySelector(`#${name}-rows`)]));
+  function controls() {
+    selectButton.setAttribute('aria-pressed', String(selecting));
+    document.querySelector('#add').disabled = selecting;
+    table.classList.toggle('selecting-rows', selecting);
+    for (const button of Object.values(actionButtons)) button.hidden = !selecting;
+    actionButtons.copy.disabled = actionButtons.duplicate.disabled = actionButtons.delete.disabled = checkedRows().length === 0;
+    actionButtons.paste.disabled = !rowClipboard?.values.length;
+  }
+  function paintRows() {
+    for (const row of body.rows) {
+      const selected = row.dataset.selected === 'true';
+      row.classList.toggle('row-selected', selected); row.setAttribute('aria-selected', String(selected));
+    }
+    controls();
+  }
+  function clearRows() {
+    for (const row of body.rows) row.dataset.selected = 'false';
+    rowAnchor = null; paintRows();
+  }
+  function setSelectionMode(value, clear = true) {
+    stopEditing(); selecting = Boolean(value); anchor = end = null;
+    if (clear || !selecting) clearRows(); paint(); paintRows();
+  }
+  selectButton.addEventListener('click', () => setSelectionMode(!selecting));
+  document.addEventListener('pointerdown', event => {
+    if (table.contains(event.target) || event.target.closest?.('.table-actions')) return;
+    if (selecting) setSelectionMode(false);
+    else { stopEditing(); anchor = end = null; clearRows(); paint(); }
   });
   const rows = () => [...body.rows].map(row => [...row.querySelectorAll('input[type="number"]')]);
   const writable = input => input.dataset.derived !== 'true';
@@ -31,7 +60,7 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
   };
   function prepare() {
     for (const input of body.querySelectorAll('input[type="number"]')) {
-      input.readOnly = !writable(input) || input !== editing;
+      input.readOnly = selecting || !writable(input) || input !== editing;
       input.tabIndex = -1;
       input.closest('td').tabIndex = -1;
       input.closest('td').setAttribute('role', 'gridcell');
@@ -92,6 +121,18 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     notify();
   }
   table.addEventListener('pointerdown', event => {
+    if (selecting) {
+      const row = event.target.closest('tbody tr');
+      if (!row || event.target.closest('[data-remove-row]')) return;
+      event.preventDefault(); stopEditing(); anchor = end = null;
+      const index = [...body.rows].indexOf(row);
+      if (event.shiftKey && rowAnchor !== null) {
+        const top = Math.min(rowAnchor, index), bottom = Math.max(rowAnchor, index);
+        [...body.rows].forEach((item, i) => { item.dataset.selected = String(i >= top && i <= bottom); });
+      } else { row.dataset.selected = String(row.dataset.selected !== 'true'); rowAnchor = index; }
+      row.tabIndex = 0; row.focus(); paint(); paintRows();
+      return;
+    }
     const point = locate(event.target);
     if (!point || (editing === event.target && !event.shiftKey)) return;
     event.preventDefault();
@@ -100,6 +141,7 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     else edit(point);
   });
   table.addEventListener('dblclick', event => {
+    if (selecting) return;
     const point = locate(event.target);
     if (point && rows()[point.row][point.col] !== editing) edit(point);
   });
@@ -111,6 +153,7 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     }
   });
   table.addEventListener('keydown', event => {
+    if (selecting) return;
     if (event.target.matches('input[type="color"], button')) return;
     if (event.target.matches('input[type="checkbox"]')) return;
     if (!end) {
@@ -187,29 +230,48 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
   const names = () => rows()[0]?.map(input => input.name) ?? ['theta', 'phase', 'pitch', 'efficiency', 'azimuth', 'radius'];
   function removeSelected() {
     const selected = checkedRows();
+    if (!selected.length) return;
     rowInsertion = [...body.rows].indexOf(selected[0]);
     removeRows(selected); anchor = end = null; paint(); notify();
   }
   document.addEventListener('keydown', event => {
-    if (!checkedRows().length || !rowContext(event) || event.altKey || event.isComposing) return;
+    if (!(selecting || checkedRows().length) || !rowContext(event) || event.altKey || event.isComposing) return;
     const command = event.metaKey || event.ctrlKey, key = event.key.toLowerCase();
     if (command && key === 'a') {
       event.preventDefault(); event.stopPropagation(); stopEditing();
-      const all = table.querySelector('#select-all');
-      all.checked = true; all.dispatchEvent(new Event('change', { bubbles: true }));
+      for (const row of body.rows) row.dataset.selected = 'true';
+      paintRows();
     } else if (command && key === 'd') {
       event.preventDefault(); event.stopPropagation(); stopEditing();
-      if (!event.repeat) { duplicateRows(checkedRows()); anchor = end = null; paint(); notify(); }
+      if (!event.repeat && checkedRows().length) { duplicateRows(checkedRows()); anchor = end = null; paint(); paintRows(); notify(); }
     } else if (!editing && !command && (key === 'backspace' || key === 'delete')) {
       event.preventDefault(); event.stopPropagation(); removeSelected();
     }
   }, true);
+  function copyRows() {
+    if (!checkedRows().length) return;
+    const values = checkedRows().map(rowValues), columns = names();
+    const text = values.map(row => columns.map(name => row[name]).join('\t')).join('\n');
+    rowClipboard = { text, values }; rowInsertion = null; controls();
+    navigator.clipboard?.writeText(text).catch(() => {});
+  }
+  actionButtons.copy.addEventListener('click', copyRows);
+  actionButtons.paste.addEventListener('click', () => {
+    if (!rowClipboard?.values.length) return;
+    const values = rowClipboard.values.map(row => ({ ...row }));
+    insertRows(values, body.rows.length); anchor = end = null; paint(); paintRows(); notify();
+  });
+  actionButtons.duplicate.addEventListener('click', () => {
+    if (!checkedRows().length) return;
+    duplicateRows(checkedRows()); anchor = end = null; paint(); paintRows(); notify();
+  });
+  actionButtons.delete.addEventListener('click', removeSelected);
   for (const type of ['copy', 'cut']) document.addEventListener(type, event => {
     if (!checkedRows().length || !rowContext(event) || !event.clipboardData) return;
     event.preventDefault(); event.stopPropagation(); stopEditing();
     const values = checkedRows().map(rowValues), columns = names();
     const text = values.map(row => columns.map(name => row[name]).join('\t')).join('\n');
-    rowClipboard = { text, values };
+    rowClipboard = { text, values }; controls();
     if (type === 'copy') rowInsertion = null;
     event.clipboardData.setData('text/plain', text);
     event.clipboardData.setData('application/x-il-tool-rows', JSON.stringify(values));
@@ -232,7 +294,10 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     event.preventDefault(); event.stopPropagation(); stopEditing();
     const columns = names();
     const incoming = copied ?? values.map(values => Object.fromEntries(columns.map((name, i) => [name, values[i]?.trim() ?? ''])));
-    if (!selected.length) {
+    if (copied && selecting) {
+      rowClipboard = { text, values: copied };
+      insertRows(copied, body.rows.length); rowInsertion = null;
+    } else if (!selected.length) {
       const index = rowInsertion ?? (end ? end.row + 1 : body.rows.length);
       insertRows(incoming, index); rowInsertion = null;
     } else {
@@ -250,7 +315,7 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
         insertRows(incoming.slice(selected.length), index);
       }
     }
-    anchor = end = null; paint(); notify();
+    anchor = end = null; paint(); paintRows(); notify();
   }, true);
   for (const type of ['copy', 'cut']) table.addEventListener(type, event => {
     if (editing || !anchor || !end || !event.clipboardData) return;
@@ -292,8 +357,8 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
   });
   new MutationObserver(() => {
     if (end && (end.row >= rows().length)) anchor = end = null;
-    paint();
+    paint(); paintRows();
   }).observe(body, { childList: true });
-  paint();
-  return { refresh: () => { stopEditing(); paint(); } };
+  paint(); paintRows();
+  return { isSelecting: () => selecting, setSelectionMode, refresh: () => { stopEditing(); paint(); paintRows(); } };
 }
