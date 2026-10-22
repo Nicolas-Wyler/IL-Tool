@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHistory } from '../dist/history.js';
+import { createHistory, parameterSnapshot } from '../dist/history.js';
 import { formatNumber, numberValue } from '../dist/numbers.js';
 import { maskBounds, maskWidth, centerIfFits, maskViewCenter, interferenceWidth } from '../dist/framing.js';
 import { defaultRows, linkRow, gratingAzimuth, waveFromRow } from '../dist/linked-rows.js';
@@ -24,6 +24,17 @@ state.value = 3;
 history.checkpoint(); history.redo(); assert.equal(state.value, 3);
 history.undo(); assert.equal(state.value, 2);
 state.value = 4; history.redo(); assert.equal(state.value, 4); // An uncommitted edit invalidates redo.
+
+// Clicking Undo exits row selection before its click handler runs. That UI
+// change must not create a new undo step or repeatedly restore the same edit.
+let project = { rows: [{ pitch: '40', color: '#123abc', selected: false }], selectionMode: false };
+const rowHistory = createHistory({ capture: () => parameterSnapshot(project), restore: snapshot => { project = { ...project, ...snapshot }; } });
+project.rows.push({ pitch: '40', color: '#abcdef', selected: true });
+project.selectionMode = true; rowHistory.checkpoint();
+project.selectionMode = false; project.rows.forEach(row => { row.selected = false; });
+rowHistory.undo(); assert.equal(project.rows.length, 1);
+rowHistory.redo(); assert.equal(project.rows.length, 2);
+assert.equal(project.rows[1].color, '#abcdef');
 
 assert.equal(formatNumber('23.0940107676'), '23.09');
 assert.equal(formatNumber('20'), '20');

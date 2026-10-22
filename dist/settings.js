@@ -27,7 +27,8 @@ export function parseSettings(text) {
       || !['wavelength', 'workingDistance', 'gratingWidth'].every(key => numericText(s[key]))
       || !Array.isArray(s.rows) || s.rows.length > 10000
       || !s.rows.every(row => row && ['theta', 'phase', 'pitch', 'efficiency', 'azimuth', 'radius'].every(key => numericText(row[key]))
-        && /^#[0-9a-f]{6}$/i.test(row.color) && typeof row.selected === 'boolean' && [-1, 1].includes(row.angleSign))
+        && /^#[0-9a-f]{6}$/i.test(row.color) && (row.manualColor === undefined || typeof row.manualColor === 'boolean')
+        && typeof row.selected === 'boolean' && [-1, 1].includes(row.angleSign))
       || !camera(s.fieldViewport) || !camera(s.layoutViewport)
       || !Number.isFinite(s.timeSeconds) || !Number.isFinite(s.playbackSpeed) || s.playbackSpeed < 1 / 64 || s.playbackSpeed > 64
       || typeof s.running !== 'boolean' || s.autoFramingVersion !== 1 || s.paletteVersion !== 1 || typeof s.presetVersion !== 'string'

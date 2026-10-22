@@ -1,3 +1,9 @@
+// Selection and playback are interface state, not parameter edits.
+export function parameterSnapshot(state) {
+  const { timeSeconds, running, playbackSpeed, fieldViewport, layoutViewport, projectSavedFingerprint, selectionMode, ...parameters } = state;
+  return { ...parameters, rows: parameters.rows.map(({ selected, ...row }) => row) };
+}
+
 export function createHistory({ capture, restore, limit = 100, onChange = () => {} }) {
   let snapshots = [JSON.stringify(capture())], index = 0, restoring = false;
   const notify = () => onChange({ canUndo: index > 0, canRedo: index < snapshots.length - 1 });

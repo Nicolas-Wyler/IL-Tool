@@ -28,3 +28,6 @@ assert.equal(projectFingerprint(project), projectFingerprint({ ...project, timeS
 assert.notEqual(projectFingerprint(project), projectFingerprint({ ...project, wavelength:'9' }));
 assert.notEqual(projectFingerprint(project), projectFingerprint({ ...project, projectName:'Renamed' }));
 assert.equal(parseSettings(serializeSettings({ ...project, projectSavedFingerprint:'internal' })).projectSavedFingerprint, undefined);
+const manual = { ...project, rows: project.rows.map(row => ({ ...row, manualColor:true })) };
+assert.deepEqual(parseSettings(serializeSettings(manual)), manual);
+assert.throws(() => parseSettings(JSON.stringify({format:'IL Tool',version:1,settings:{...manual,rows:manual.rows.map(row=>({...row,manualColor:'true'}))}})));

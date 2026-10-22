@@ -5,9 +5,9 @@ export function setupPageControls() {
   const content = document.querySelector('.scroll-content');
   const releaseTouchButton = () => document.querySelectorAll('.touch-pressed').forEach(button => button.classList.remove('touch-pressed'));
   document.addEventListener('pointerdown', event => {
-    const touch = event.pointerType === 'touch';
+    const touch = event.pointerType !== 'mouse';
     document.body.classList.toggle('touch-input', touch); releaseTouchButton();
-    const button = event.target.closest('.file-controls .icon-button');
+    const button = event.target.closest('button');
     if (touch && button && !button.disabled) button.classList.add('touch-pressed');
   });
   document.addEventListener('pointermove', event => {

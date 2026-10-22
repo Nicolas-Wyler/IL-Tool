@@ -1,10 +1,11 @@
 import { setupPageControls } from './page-controls.js';
+import { colorAt, makePalette, needsPaletteRepair, validColor } from './palette.js';
 import { setupTableLayout } from './table-layout.js';
 import { setupExport } from './exports.js';
 import { setupPreferences, DEFAULT_RESOLUTION, validResolution } from './preferences.js';
 import { setupFileControls } from './settings.js';
 import { numberText, numberValue, setNumber, formatNumbers, setupNumbers } from './numbers.js';
-import { createHistory } from './history.js';
+import { createHistory, parameterSnapshot } from './history.js';
 import { interferenceWidth } from './framing.js';
 import { setupPersistence } from './persistence.js';
 import { setupViewport } from './viewport.js';
@@ -39,28 +40,29 @@ let timeSeconds = 0, running = false, lastFrame = null, frameId = null, playback
 let nextWaveId = 1, editMode = 'wave';
 let exportResolution = DEFAULT_RESOLUTION;
 const rowNames = ['theta', 'phase', 'pitch', 'efficiency', 'azimuth', 'radius'];
-const colorAt = hue => {
-  hue = ((hue % 6) + 6) % 6;
-  const x = 1 - Math.abs(hue % 2 - 1);
-  return '#' + [[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(hue)]
-    .map(channel => Math.round((.28 + .65 * channel) * 255).toString(16).padStart(2, '0')).join('');
-};
 const randomColor = () => colorAt(Math.random() * 6);
-function recolorRows() {
-  const inputs = [...waveList.querySelectorAll('.row-color')];
+function setRowColor(input, color) {
+  input.value = validColor(color) ? color : randomColor();
+  input.defaultValue = input.value;
+}
+function recolorRows(preserveManual = false) {
+  const all = [...waveList.querySelectorAll('.row-color')];
+  const inputs = preserveManual ? all.filter(input => input.closest('tr').dataset.manualColor !== 'true') : all;
+  const reserved = preserveManual ? all.filter(input => input.closest('tr').dataset.manualColor === 'true').map(input => input.value) : [];
   if (!inputs.length) return;
   let offset = Math.random() * 6, colors;
   for (let attempt = 0; attempt < 12; attempt++) {
-    colors = inputs.map((_, index) => colorAt(offset + 6 * index / inputs.length));
+    colors = makePalette(inputs.length, offset, reserved);
     if (colors.every((color, index) => color !== inputs[index].value)) break;
     offset += .037;
   }
-  inputs.forEach((input, index) => { input.value = colors[index]; });
+  inputs.forEach((input, index) => { setRowColor(input, colors[index]); input.closest('tr').dataset.manualColor = 'false'; });
 }
 function captureRows() {
   return [...waveList.children].map(row => ({
     ...Object.fromEntries(rowNames.map(name => [name, numberText(row.querySelector(`[name="${name}"]`))])),
-    color: row.querySelector('.row-color').value, selected: row.dataset.selected === 'true', angleSign: Number(row.dataset.angleSign) || 1
+    color: row.querySelector('.row-color').value, manualColor: row.dataset.manualColor === 'true',
+    selected: row.dataset.selected === 'true', angleSign: Number(row.dataset.angleSign) || 1
   }));
 }
 function syncRows() {
@@ -73,7 +75,9 @@ function syncRows() {
       input.dataset.derived = String(derived);
       if (derived) setNumber(input, linked[name]);
       input.required = !derived;
-      input.readOnly = derived || document.activeElement !== input;
+      input.readOnly = derived || Boolean(table?.isSelecting());
+      input.disabled = input.readOnly;
+      input.tabIndex = input.disabled ? -1 : 0;
       input.closest('td').classList.toggle('derived', derived);
       input.setAttribute('aria-readonly', String(derived));
       input.placeholder = (name === 'pitch' && linked.theta !== '' && Number(linked.theta) === 0)
@@ -184,7 +188,10 @@ function addWave(saved) {
     label.htmlFor = input.id;
     if (saved[input.name] !== undefined) setNumber(input, saved[input.name]);
   }
-  row.querySelector('.row-color').value = saved.color ?? randomColor();
+  const color = row.querySelector('.row-color');
+  color.id = color.name = `color-${id}`;
+  setRowColor(color, saved.color);
+  row.dataset.manualColor = String(Boolean(saved.manualColor));
   row.dataset.selected = String(Boolean(saved.selected));
   row.querySelector('[data-remove-row]').setAttribute('aria-label', `Remove row ${id}`);
   waveList.append(row);
@@ -206,7 +213,19 @@ modeSwitch.addEventListener('click', () => {
   table.refresh(); history?.checkpoint();
 });
 form.addEventListener('submit', event => event.preventDefault());
-form.addEventListener('input', update);
+// Settings owns program reset; a native form reset discards the linked values.
+form.addEventListener('reset', event => event.preventDefault());
+form.addEventListener('input', event => {
+  if (event.target.matches('.row-color')) {
+    event.target.defaultValue = event.target.value; event.target.closest('tr').dataset.manualColor = 'true';
+  }
+  update();
+});
+form.addEventListener('change', event => {
+  if (event.target.matches('.row-color')) {
+    event.target.defaultValue = event.target.value; event.target.closest('tr').dataset.manualColor = 'true'; update();
+  }
+});
 view.addEventListener('change', render);
 document.addEventListener('visibilitychange', () => { lastFrame = null; });
 function syncSelection() {
@@ -254,7 +273,7 @@ const state = {
     editMode = saved.editMode;
     waveList.replaceChildren(); nextWaveId = 1;
     saved.rows.forEach(addWave);
-    if (saved.paletteVersion !== 1 || saved.rows.some(row => !row.color)) recolorRows();
+    if (saved.paletteVersion !== 1 || needsPaletteRepair(saved.rows)) recolorRows(true);
     view.value = saved.view ?? 'complex';
     fieldViewport.restore(saved.autoFramingVersion === 1 ? saved.fieldViewport : null);
     gratings.restore({ viewport: saved.autoFramingVersion === 1 ? saved.layoutViewport : null });
@@ -277,10 +296,7 @@ setupPersistence(state);
 setupUpdates(state);
 
 history = createHistory({
-  capture: () => {
-    const { timeSeconds, running, playbackSpeed, fieldViewport, layoutViewport, projectSavedFingerprint, ...parameters } = state.capture();
-    return parameters;
-  },
+  capture: () => parameterSnapshot(state.capture()),
   restore: snapshot => state.restore({ ...state.capture(), ...snapshot }),
   onChange: ({ canUndo, canRedo }) => {
     document.querySelector('#undo').disabled = !canUndo;

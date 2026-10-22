@@ -61,11 +61,13 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
   };
   function prepare() {
     for (const input of body.querySelectorAll('input[type="number"]')) {
-      input.readOnly = selecting || !writable(input) || input !== editing;
-      input.tabIndex = -1;
+      input.disabled = selecting || !writable(input);
+      input.readOnly = input.disabled;
+      input.tabIndex = input.disabled ? -1 : 0;
       input.closest('td').tabIndex = -1;
       input.closest('td').setAttribute('role', 'gridcell');
     }
+    for (const element of body.querySelectorAll('.row-color, [data-remove-row], tr')) element.tabIndex = -1;
   }
   function paint() {
     prepare();
@@ -75,9 +77,8 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
       const cell = input.closest('td');
       cell.classList.toggle('selected', selected);
       cell.setAttribute('aria-selected', String(selected));
-      cell.tabIndex = end?.row === row && end?.col === col ? 0 : -1;
+      cell.tabIndex = -1;
     }));
-    if (!end) rows()[0]?.[0]?.closest('td').setAttribute('tabindex', '0');
   }
   function select(point, extend = false) {
     rowInsertion = null;
@@ -114,6 +115,15 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     select({ row: Math.max(0, Math.min(grid.length - 1, end.row + dr)),
       col: Math.max(0, Math.min(grid[0].length - 1, end.col + dc)) }, extend);
   }
+  function tabMove(backward = false) {
+    const grid = rows(), width = grid[0]?.length ?? 0;
+    const points = grid.flatMap((cells, row) => cells.flatMap((input, col) => writable(input) ? [{ row, col }] : []));
+    if (!points.length || !end) return;
+    const current = end.row * width + end.col;
+    const next = backward ? points.findLast(point => point.row * width + point.col < current)
+      : points.find(point => point.row * width + point.col > current);
+    stopEditing(); edit(next ?? (backward ? points.at(-1) : points[0]));
+  }
   function clear() {
     const range = cellRange(anchor, end);
     rows().forEach((cells, row) => cells.forEach((input, col) => {
@@ -146,6 +156,13 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     const point = locate(event.target);
     if (point && rows()[point.row][point.col] !== editing) edit(point);
   });
+  table.addEventListener('focusin', event => {
+    const input = event.target;
+    if (selecting || !input.matches('input[type="number"]') || !writable(input) || input === editing) return;
+    const point = locate(input);
+    if (!point) return;
+    stopEditing(); anchor = end = point; editing = input; original = numberText(input); paint();
+  });
   table.addEventListener('focusout', event => {
     if (event.target === editing) stopEditing();
     if (!table.contains(event.relatedTarget)) {
@@ -166,7 +183,9 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     const command = event.metaKey || event.ctrlKey;
     if (editing && command && ['a', 'd'].includes(key)) { stopEditing(); select(end); }
     if (editing) {
-      if (event.key === 'Escape') {
+      if (!command && !event.altKey && !event.shiftKey && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+        event.preventDefault(); tabMove(event.key === 'ArrowUp');
+      } else if (event.key === 'Escape') {
         event.preventDefault();
         const input = editing, value = original;
         setNumber(input, value);
@@ -176,9 +195,9 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
         requestAnimationFrame(() => { setNumber(input, value); notify(false); });
       } else if (event.key === 'Enter' || event.key === 'Tab') {
         event.preventDefault();
+        if (event.key === 'Tab') { tabMove(event.shiftKey); return; }
         stopEditing();
-        move(event.key === 'Enter' ? (event.shiftKey ? -1 : 1) : 0,
-          event.key === 'Tab' ? (event.shiftKey ? -1 : 1) : 0);
+        move(event.shiftKey ? -1 : 1, 0);
       }
       return;
     }
@@ -210,12 +229,7 @@ export function setupTable(table, { addRow, removeRows, duplicateRows, insertRow
     } else if (event.key === 'Tab' || event.key === 'Enter') {
       event.preventDefault();
       if (event.key === 'Enter') edit(end);
-      else {
-        const grid = rows(), width = grid[0].length;
-        const index = end.row * width + end.col + (event.shiftKey ? -1 : 1);
-        if (index >= 0 && index < grid.length * width) select({ row: Math.floor(index / width), col: index % width });
-        else (event.shiftKey ? table.previousElementSibling?.querySelector('input') : table.parentElement.nextElementSibling?.querySelector('button'))?.focus();
-      }
+      else tabMove(event.shiftKey);
     } else if (event.key === 'F2') {
       event.preventDefault(); edit(end);
     } else if (!command && !event.altKey && event.key.length === 1 && /[0-9.+-]/.test(event.key)) {
