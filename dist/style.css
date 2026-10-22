@@ -157,6 +157,7 @@ input[type=checkbox] { width: 16px; height: 16px; margin: 0; padding: 0; vertica
 .plot-controls-bar > .add-button { width: 132px; max-width: 25%; }
 .plot-controls-bar .view-controls { display: grid; grid-template-columns: minmax(70px, 132px) auto 52px; justify-content: end; align-items: center; gap: 8px; margin: 0; }
 .plot-controls-bar .speed-controls button { width: 28px; }
+.plot-controls-bar .view-controls select, .plot-controls-bar .view-controls button { height: 42px; }
 
 .plots .plot { padding: 0; }
 .unified-master { grid-template-columns: repeat(3, minmax(0, 200px)) 1fr; }
