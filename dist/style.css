@@ -231,8 +231,8 @@ body.fits-viewport { overflow-y: hidden; }
 .table-actions button { min-width: 64px; }
 @media (max-width: 600px) {
   .plot-controls-bar { gap: 8px; }
-  .table-actions button { min-width: 0; padding-inline: 8px; font-size: 13px; }
-  .plot-controls-bar .view-controls { grid-template-columns: minmax(108px, 132px) auto 48px; flex-basis: 224px; max-width: 248px; gap: 6px; font-size: 13px; }
+  .table-actions button { min-width: 0; padding-inline: 6px; font-size: 13px; }
+  .plot-controls-bar .view-controls { grid-template-columns: minmax(116px, 132px) auto 48px; flex-basis: 232px; min-width: 232px; max-width: 248px; gap: 6px; font-size: 13px; }
   .plot-controls-bar .view-controls select { padding-inline: 8px; }
 }
 #select-rows[aria-pressed=true] { background: #2e405d; border-color: #91adff; }
