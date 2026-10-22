@@ -2,6 +2,7 @@ import { numberValue } from './numbers.js';
 export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 100;
 export const SNAP_DURATION = 160;
+const SINGLE_FINGER_WINDOW = 2000;
 
 export function zoomAt(view, factor, x, y, baseWidth, minimum = MIN_ZOOM) {
   const zoom = Math.max(minimum, Math.min(MAX_ZOOM, view.zoom * factor));
@@ -157,22 +158,29 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
   surface.addEventListener('pointerup', endDrag);
   surface.addEventListener('pointercancel', endDrag);
   surface.addEventListener('lostpointercapture', endDrag);
+  let oneFingerUntil = 0;
   const touchGeometry = touches => {
-    const [a, b] = touches, rect = surface.getBoundingClientRect();
+    const a = touches[0], b = touches[1] ?? a, rect = surface.getBoundingClientRect();
     return { distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
       x: ((a.clientX + b.clientX) / 2 - rect.left) / rect.width - .5,
       y: .5 - ((a.clientY + b.clientY) / 2 - rect.top) / rect.height };
   };
+  const beginTouch = event => {
+    cancelMotion();
+    touch = { ...touchGeometry(event.touches), count: event.touches.length, view: { ...view }, last: { ...view }, width: bounds().width, time: event.timeStamp };
+    surface.classList.add('panning');
+  };
   surface.addEventListener('touchstart', event => {
-    if (event.touches.length !== 2) return;
-    event.preventDefault(); cancelMotion();
-    touch = { ...touchGeometry(event.touches), view: { ...view }, last: { ...view }, width: bounds().width, time: event.timeStamp };
+    if (event.target.closest('button')) return;
+    if (event.touches.length !== 2 && !(event.touches.length === 1 && performance.now() < oneFingerUntil)) return;
+    event.preventDefault(); oneFingerUntil = Infinity; beginTouch(event);
   }, { passive: false });
   surface.addEventListener('touchmove', event => {
-    if (!touch || event.touches.length !== 2) return;
+    if (!touch || event.touches.length !== touch.count) return;
     event.preventDefault();
     const now = touchGeometry(event.touches), dt = Math.max(8, event.timeStamp - touch.time);
-    const zoom = Math.max(gestureMinimum, Math.min(MAX_ZOOM, touch.view.zoom * now.distance / Math.max(1, touch.distance)));
+    const zoom = touch.count === 1 ? touch.view.zoom
+      : Math.max(gestureMinimum, Math.min(MAX_ZOOM, touch.view.zoom * now.distance / Math.max(1, touch.distance)));
     const width = baseWidth() / zoom;
     view = { zoom, x: touch.view.x + touch.x * touch.width - now.x * width,
       y: touch.view.y + touch.y * touch.width - now.y * width };
@@ -180,9 +188,11 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
     touch.last = { ...view }; touch.time = event.timeStamp; changed();
   }, { passive: false });
   const endTouch = event => {
-    if (touch && event.touches.length !== 2) {
+    if (touch && event.touches.length !== touch.count) {
+      if (event.type !== 'touchcancel' && event.touches.length === 1) { beginTouch(event); return; }
       const velocity = event.timeStamp - touch.time < 80 ? touch.velocity ?? {} : {};
-      touch = null; settle(velocity);
+      touch = null; oneFingerUntil = event.type === 'touchcancel' ? 0 : performance.now() + SINGLE_FINGER_WINDOW;
+      surface.classList.remove('panning'); settle(velocity);
     }
   };
   surface.addEventListener('touchend', endTouch); surface.addEventListener('touchcancel', endTouch);

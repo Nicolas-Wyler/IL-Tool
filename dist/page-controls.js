@@ -3,13 +3,35 @@ import { SNAP_DURATION } from './viewport.js';
 export function setupPageControls() {
   const scroll = document.querySelector('.app-scroll');
   const content = document.querySelector('.scroll-content');
+  const header = document.querySelector('.app-brand');
+  const controls = document.querySelector('.plot-controls-bar .view-controls');
+  const slot = document.createElement('div'); slot.className = 'view-controls-slot';
+  controls.before(slot); slot.append(controls);
+  let headerBottom = 0;
+  function handoff() {
+    const rect = slot.getBoundingClientRect();
+    const shift = Math.max(-headerBottom, Math.min(0, rect.top - headerBottom));
+    header.style.transform = shift ? `translateY(${shift}px)` : '';
+    const pinned = rect.top < headerBottom;
+    controls.classList.toggle('pinned', pinned);
+    controls.style.left = pinned ? `${rect.left}px` : '';
+    controls.style.top = pinned ? `${Math.max(0, rect.top)}px` : '';
+    controls.style.width = pinned ? `${rect.width}px` : '';
+  }
+  function layout() {
+    headerBottom = header.offsetTop + header.offsetHeight;
+    const reserve = `${Math.max(0, headerBottom + 8 - scroll.offsetTop)}px`;
+    if (content.style.getPropertyValue('--header-reserve') !== reserve) content.style.setProperty('--header-reserve', reserve);
+    handoff(); fits();
+  }
   const fits = () => document.body.classList.toggle('fits-viewport', scroll.scrollHeight <= scroll.clientHeight + 1);
-  const observer = new ResizeObserver(fits);
-  observer.observe(scroll); observer.observe(document.querySelector('.scroll-content'));
-  window.addEventListener('resize', fits);
-  fits();
+  const observer = new ResizeObserver(layout);
+  for (const element of [scroll, content, header, slot, document.querySelector('.plot-controls-bar')]) observer.observe(element);
+  window.addEventListener('resize', layout);
+  scroll.addEventListener('scroll', handoff, { passive: true });
+  layout();
   let pull = 0, settleTimer = null, animation = null;
-  const setPull = value => { content.style.transform = value ? `translateY(${value}px)` : ''; };
+  const setPull = value => { content.style.top = value ? `${value}px` : ''; handoff(); };
   function settlePull() {
     cancelAnimationFrame(animation);
     const start = pull, began = performance.now();

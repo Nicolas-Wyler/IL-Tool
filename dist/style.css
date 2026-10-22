@@ -188,11 +188,17 @@ input[type=checkbox]:hover { outline: 2px solid #a2b5ff; outline-offset: 2px; }
 .app-brand .file-controls { margin-left: auto; font-size: 14px; }
 .app-brand #update { margin-left: 0; }
 .unified-master { grid-template-columns: repeat(3, minmax(0, 200px)) minmax(max-content, 1fr); }
-.unified-master .edit-mode { align-self: start; height: 16.8px; margin: 0; white-space: nowrap; justify-self: end; }
+.unified-master .edit-mode { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.4em minmax(0, 1fr); gap: 7px 9px; width: min(100%, 200px); margin: 0; white-space: nowrap; justify-self: end; }
+.unified-master .edit-mode > span:first-child { grid-area: 1 / 1; }
+.unified-master .edit-mode > span:last-child { grid-area: 1 / 2; text-align: right; }
+.unified-master #edit-mode { grid-area: 2 / 1 / 3 / 3; display: flex; align-items: center; justify-content: start; width: 100%; height: 100%; min-height: 0; }
+.unified-master #edit-mode span { width: auto; height: 100%; aspect-ratio: 1; transform: none; }
+.unified-master #edit-mode[aria-checked=true] { justify-content: end; }
 .unified-master sub { line-height: 0; }
+@media (max-width: 900px) { .unified-master { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
-  .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; }
-  .unified-master .edit-mode { height: 15.4px; gap: 4px; font-size: 10px; }
+  .unified-master { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .unified-master .edit-mode { column-gap: 4px; font-size: 11px; }
 }
 @media (max-width: 380px) { .app-brand .file-controls button { min-width: 0; padding: 8px; } }
 
@@ -202,7 +208,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { overflow-x: hidden; }
 body.fits-viewport { overflow-y: hidden; }
 .table-scroll { overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
-.app-brand { position: relative; flex: none; z-index: 10; padding-block: 12px; margin-top: -12px; margin-bottom: 8px; background: #101114; --header-control-height: 42px; }
+.app-brand { position: absolute; top: 12px; left: 28px; right: 28px; flex: none; z-index: 10; padding-block: 12px; margin: 0; background: #101114; --header-control-height: 42px; }
 .app-brand .file-controls button { height: var(--header-control-height); }
 .app-brand .file-controls .icon-button { min-width: 28px; width: 28px; padding: 3px; display: grid; place-items: center; color: #e6e8ed; background: transparent; border-color: transparent; }
 .app-brand .file-controls .icon-button:not(:disabled):hover { background: #242a37; border-color: transparent; }
@@ -260,10 +266,18 @@ body.fits-viewport { overflow-y: hidden; }
   .app-brand .file-controls .icon-button { min-width: 24px; width: 24px; }
   #project-title { font-size: 12px; padding: 4px; }
 }
-main { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+main { position: relative; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
 .app-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; margin-inline: -28px; padding: 0 28px 24px; }
+.scroll-content { position: relative; padding-top: var(--header-reserve, 62px); }
+.view-controls-slot { flex: 1 1 224px; min-width: 224px; max-width: 256px; height: 42px; }
+.plot-controls-bar .view-controls-slot .view-controls { width: 100%; min-width: 0; max-width: none; }
+.view-controls.pinned { position: fixed; z-index: 11; background: #101114; }
 .fits-viewport .app-scroll { overflow-y: hidden; overscroll-behavior-y: none; }
-@media (max-width: 600px) { .app-scroll { margin-inline: -16px; padding: 0 16px 16px; } }
+@media (max-width: 600px) {
+  .app-brand { top: 4px; left: 16px; right: 16px; }
+  .app-scroll { margin-inline: -16px; padding: 0 16px 16px; }
+  .view-controls-slot { flex-basis: 232px; min-width: 232px; max-width: 248px; }
+}
 .unified-master > label { display: flex; flex-direction: column; align-items: stretch; }
 
 #name-prompt-form > button { display: block; margin: 16px 0 0 auto; }

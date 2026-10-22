@@ -53,6 +53,9 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     const changed = dirty(), name = cleanProjectName(nameInput.value);
     title.textContent = name + (changed ? '*' : '');
     title.dataset.dirty = String(changed);
+    const narrow = matchMedia('(max-width: 900px)').matches;
+    load.textContent = `Load${changed && narrow ? '*' : ''}`;
+    load.setAttribute('aria-label', changed && narrow ? 'Load, unsaved changes' : 'Load');
     title.setAttribute('aria-label', `${name}${changed ? ', unsaved changes' : ''}. Rename project`);
     if (settingsName.value !== nameInput.value) settingsName.value = nameInput.value;
   }
@@ -80,7 +83,7 @@ export function setupFileControls({ capture, restore, checkpoint }) {
   }
   settingsName.addEventListener('input', () => { nameInput.value = settingsName.value; refresh(); });
   settingsName.addEventListener('change', () => { nameInput.value = cleanProjectName(settingsName.value); refresh(); });
-  matchMedia('(max-width: 900px)').addEventListener('change', event => { if (event.matches) commitName(); });
+  matchMedia('(max-width: 900px)').addEventListener('change', event => { if (event.matches) commitName(); refresh(); });
   document.querySelector('#close-name-prompt').addEventListener('click', () => prompt.close('cancel'));
   document.querySelector('#name-prompt-form').addEventListener('submit', event => {
     if (!promptInput.value.trim()) { event.preventDefault(); promptInput.focus(); return; }
