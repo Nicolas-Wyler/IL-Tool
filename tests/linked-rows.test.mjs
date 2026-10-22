@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import { defaultRows, linkRow, pitchFromTheta, phaseFromPath, waveFromRow, gratingAzimuth, normalizeLinkedState } from '../dist/linked-rows.js';
+import { inPlaneWavevector } from '../dist/field.js';
+import { gratingSquare } from '../dist/grating-geometry.js';
+const near = (a, b, tolerance = 1e-7) => assert.ok(Math.abs(a - b) < tolerance, `${a} != ${b}`);
+near(pitchFromTheta(20, 30), 40);
+near(pitchFromTheta(20, -30), 40);
+assert.equal(pitchFromTheta(20, 0), Infinity);
+for (const theta of [30, -30, 60, -60]) {
+  const row = linkRow({ theta: String(theta), phase: '450', efficiency: '.25', azimuth: '120' }, 20, 2000, 'wave');
+  assert.equal(row.phase, '450');
+  near(Number(row.radius), 2000 * Math.tan(Math.abs(theta) * Math.PI / 180));
+  const reverse = linkRow(row, 20, 2000, 'pitch');
+  near(Number(reverse.theta), theta);
+  const pathNm = 2000 * 1000 / Math.cos(theta * Math.PI / 180);
+  const expectedPhase = (pathNm % 20) / 20 * 360;
+  const phaseError = ((Number(reverse.phase) - expectedPhase + 540) % 360) - 180;
+  near(phaseError, 0, 1e-3);
+  const wave = waveFromRow(row, 20);
+  near(wave.amplitude, .5);
+  const square = gratingSquare({ wavelengthNm: 20, pitchNm: Number(row.pitch), workingDistanceUm: 2000, widthUm: 80, azimuthDeg: gratingAzimuth(row) });
+  const k = inPlaneWavevector(wave);
+  assert.ok(k.ku * square.center.x + k.kv * square.center.y < 0);
+}
+const normal = gratingSquare({ wavelengthNm: 20, pitchNm: Infinity, workingDistanceUm: 2000, widthUm: 80, azimuthDeg: 0 });
+assert.equal(normal.r, 0);
+assert.equal(linkRow({ pitch: '19', theta: '30' }, 20, 2000, 'pitch').theta, '');
+assert.equal(linkRow({ pitch: '' }, 20, 2000, 'pitch').phase, '');
+assert.equal(linkRow({ theta: '', phase: '' }, 20, 2000, 'wave').pitch, '');
+near(phaseFromPath(20, 2000, 0), 0);
+near(phaseFromPath(20, 0, 30), 0);
+assert.equal(defaultRows().length, 12);
+assert.deepEqual(defaultRows().map(row => row.theta), ['30','60','-30','-60','30','60','-30','-60','30','60','-30','-60']);
+const legacy = normalizeLinkedState({ schemaVersion: 2, wavelength: '20', waves: [['.5','-30','450','120']],
+  gratings: { schemaVersion: 3, rows: [['64','.4','30','#123abc'],['80','.2','60','#abcdef']], fields: ['1500','50','3000'] } });
+assert.equal(legacy.rows.length, 2);
+assert.equal(legacy.rows[0].theta, '-30');
+assert.equal(legacy.rows[0].phase, '450');
+assert.equal(legacy.rows[0].efficiency, '.4');
+assert.equal(legacy.rows[0].color, '#123abc');
+assert.ok(Number(legacy.rows[1].theta) < 0);
+assert.equal(legacy.workingDistance, '1500');
+assert.equal(legacy.layoutWidth, '3000');
+const current = { schemaVersion: 3, editMode: 'pitch', rows: [{theta:'-30',phase:'20',pitch:'40',efficiency:'.4',azimuth:'120',color:'#123abc',angleSign:-1}] };
+assert.deepEqual(normalizeLinkedState(current), current);
+console.log('Passed: bidirectional pitch/angle links, optical-path phase and units, efficiency amplitude, inward propagation for both signs, defaults, and saved-state migration.');

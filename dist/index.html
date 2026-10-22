@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="IL Tool">
+  <title>IL Tool</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header class="app-brand"><img src="./icon-192.png" width="28" height="28" alt=""><span>IL Tool</span></header>
+    <form id="parameters" autocomplete="off">
+    <div class="master-controls unified-master">
+      <label for="wavelength"><span class="field-label">Wavelength (nm)</span><input id="wavelength" name="wavelength" type="number" value="20" min="0" step="any" required></label>
+      <label for="working-distance">Working distance (µm)<input id="working-distance" name="workingDistance" type="number" value="2000" min="0" step="any" required></label>
+      <label for="grating-width">Grating width (µm)<input id="grating-width" name="gratingWidth" type="number" value="80" min="0" step="any" required></label>
+      <div class="file-controls"><button id="save" type="button">Save</button><button id="load" type="button">Load</button><input id="load-file" type="file" accept=".iltool,.json,application/json" hidden></div>
+    </div>
+    <div class="edit-mode"><span>θ / phase</span><button id="edit-mode" type="button" role="switch" aria-label="Edit pitch instead of theta and phase" aria-checked="false"><span></span></button><span>Pitch</span></div>
+    <div class="table-scroll"><table class="parameter-table unified-table" id="wave-table" role="grid" aria-label="Waves and gratings"><thead><tr><th class="select-column"><input id="select-all" type="checkbox" aria-label="Select all rows"></th><th class="color-column" aria-label="Color"></th><th scope="col">θ (°)</th><th scope="col">Initial phase (°)</th><th scope="col">Grating pitch (nm)</th><th scope="col">Efficiency</th><th scope="col">Azimuth α (°)</th><th scope="col">Distance from center (µm)</th><th class="remove-column" aria-label="Remove"></th></tr></thead><tbody id="waves"><tr class="wave-row" aria-label="Row 1"><td class="select-cell"><input class="row-select" type="checkbox" aria-label="Select row"></td><td class="color-cell"><input class="row-color" type="color" value="#67c5ff" aria-label="Grating color"></td><td><label for="theta"><span class="field-label">θ (°)</span><input id="theta" name="theta" type="number" value="30" min="-90" max="90" step="any" required></label></td><td><label for="phase"><span class="field-label">Initial phase (°)</span><input id="phase" name="phase" type="number" value="0"  step="any" required></label></td><td><label for="pitch"><span class="field-label">Grating pitch (nm)</span><input id="pitch" name="pitch" type="number" value="27" min="0" step="any" required></label></td><td><label for="efficiency"><span class="field-label">Efficiency</span><input id="efficiency" name="efficiency" type="number" value="1" min="0" max="1" step="any" required></label></td><td><label for="azimuth"><span class="field-label">Azimuth α (°)</span><input id="azimuth" name="azimuth" type="number" value="0"  step="any" required></label></td><td><label for="radius"><span class="field-label">Distance from center (µm)</span><input id="radius" name="radius" type="number" min="0" step="any" readonly data-derived="true"></label></td><td class="remove-cell"><button class="tray-button" type="button" aria-label="Remove row 1" data-remove-row><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg></button></td></tr></tbody></table></div>
+</form>
+    <div class="plot-controls-bar"><button id="add" class="add-button" type="button">Add</button>    <div class="view-controls">
+      <select id="view" aria-label="Field view">
+        <option value="complex">Complex field</option>
+        <option value="intensity">|Ẽ|²</option>
+        <option value="phase">Phase</option>
+        <option value="realSquared">[Re(Ẽ)]²</option>
+      </select>
+      <div class="speed-controls" role="group" aria-label="Playback speed">
+        <button id="slower" type="button" aria-label="Slow down playback" title="Slower (½×)">−</button>
+        <button id="faster" type="button" aria-label="Speed up playback" title="Faster (2×)">+</button>
+      </div>
+      <button id="play" type="button" aria-pressed="false">Play</button>
+    </div>
+</div>
+    <div class="plots">
+    <section class="grating-section" aria-label="Grating controls">
+      <figure aria-label="Grating layout">
+        <div class="plot">
+          <div class="placeholder-square" role="img" aria-label="Grating layout with a center cross"><span class="center-cross" aria-hidden="true"></span></div>
+        </div>
+      </figure>
+    </section>
+    <section class="field-section" aria-label="Interference">
+    <figure aria-label="Field on the observation plane">
+      <div class="plot">
+        <div class="field-surface"><canvas id="field" width="640" height="640" role="img" aria-label="Complex field heatmap"></canvas>      <div class="legends">
+        <div class="legend" id="brightness-legend">
+          <div class="ramp"></div>
+          <div class="ends"><span>0.00</span><span id="intensity-label">|Ẽ|² (a.u.)</span><span id="intensity-max">1.00</span></div>
+        </div>
+        <div class="legend" id="phase-legend">
+          <div class="ramp phase"></div>
+          <div class="ends"><span>−π</span><span>Phase</span><span>π</span></div>
+        </div>
+      </div>
+</div>
+      </div>
+    </figure>
+    </section>
+    </div>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

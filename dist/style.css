@@ -1,0 +1,160 @@
+:root { color-scheme: dark; font: 14px/1.4 Helvetica, "Helvetica Neue", Arial, sans-serif; color: #e6e8ed; background: #101114; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: min(720px, 100%); margin: auto; padding: 24px; }
+.controls, .add-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 40px; gap: 12px; align-items: end; }
+.controls { margin-bottom: 12px; }
+.add-controls { margin-bottom: 18px; }
+label { display: block; font-size: 12px; color: #a7aab4; }
+.controls label { font-size: 11px; }
+.wave-row:not(:first-child) .field-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+input, button, select { font: inherit; border-radius: 7px; border: 1px solid #383b44; }
+input { width: 100%; min-width: 0; margin-top: 7px; background: #1a1c22; color: #f0f1f4; padding: 10px; font-variant-numeric: tabular-nums; }
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid #a2b5ff; outline-offset: 3px; }
+input:invalid { border-color: #f48484; }
+.view-controls { display: grid; grid-template-columns: minmax(0, 1fr) 132px auto 92px; gap: 12px; align-items: end; margin-bottom: 16px; }
+select { width: 100%; background: #1a1c22; color: #f0f1f4; padding: 10px; }
+button { padding: 10px; background: #e6e8ed; color: #15161a; cursor: pointer; font-weight: 600; }
+button:disabled { cursor: default; opacity: .5; }
+.add-button { grid-column: 1; background: #1a1c22; color: #f0f1f4; }
+.tray-button { grid-column: 5; grid-row: 1; width: 40px; height: 41px; padding: 0; display: grid; place-items: center; color: #ff6b6b; border-color: #85454a; background: #2b171c; }
+.speed-controls { display: flex; }
+.speed-controls button { width: 34px; padding: 10px 0; background: #1a1c22; color: #f0f1f4; }
+.speed-controls button:first-child { border-radius: 7px 0 0 7px; }
+.speed-controls button:last-child { border-radius: 0 7px 7px 0; border-left: 0; }
+figure { margin: 0; }
+.plot { position: relative; padding: 0 0 24px 24px; }
+canvas { display: block; width: 100%; aspect-ratio: 1; background: black; }
+.v-axis { position: absolute; left: 0; top: 50%; transform: translateY(-100%); color: #969ba7; font-size: 11px; }
+.u-axis { position: absolute; left: 24px; right: 0; bottom: 0; display: flex; justify-content: space-between; color: #969ba7; font-size: 10px; }
+.legends { padding-left: 24px; margin-top: 8px; display: flex; gap: 20px; }
+.legend { flex: 1; min-width: 0; }
+[hidden] { display: none !important; }
+.ramp { height: 6px; background: linear-gradient(to right, #000, #fff); border: 1px solid #383b44; border-radius: 3px; }
+.ramp.phase { background: linear-gradient(to right, #0ff, #00f, #f0f, #f00, #ff0, #0f0, #0ff); }
+.ends { display: flex; justify-content: space-between; color: #969ba7; font-size: 10px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  main { padding: 16px 12px; }
+  .controls, .add-controls { grid-template-columns: repeat(2, minmax(0, 1fr)) 40px; gap: 10px; }
+  .tray-button { grid-column: 3; grid-row: 1; }
+  label { font-size: 11px; }
+  input { padding: 9px 7px; }
+  .view-controls { grid-template-columns: minmax(0, 1fr) 96px auto 60px; gap: 8px; }
+  .speed-controls button { width: 28px; }
+}
+.update-toast { position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 10; padding: 9px 18px; border: 1px solid #383b44; border-radius: 999px; background: #e6e8ed; color: #15161a; box-shadow: 0 4px 20px #0004; pointer-events: none; }
+.grating-section { margin-top: 32px; }
+.grating-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.grating-row, .grating-add-controls { grid-template-columns: repeat(3, minmax(0, 1fr)) 40px; }
+.grating-row .tray-button { grid-column: 4; grid-row: 1; }
+.grating-row:not(:first-child) .field-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.placeholder-controls { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.placeholder-controls label { width: 132px; }
+.placeholder-square { width: 100%; aspect-ratio: 1; background: black; }
+@media (max-width: 600px) {
+  .grating-row, .grating-add-controls { gap: 8px; }
+  .grating-fields { gap: 10px; }
+  .placeholder-controls label { width: 96px; }
+}
+.placeholder-square { position: relative; overflow: hidden; }
+.grating-drawing { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.grating-outline { fill: none; stroke: #e6e8ed; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.center-cross { position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; transform: translate(-50%, -50%); pointer-events: none; }
+.center-cross::before, .center-cross::after { content: ''; position: absolute; background: #e6e8ed; }
+.center-cross::before { width: 9px; height: 1px; top: 4px; left: 0; }
+.center-cross::after { width: 1px; height: 9px; top: 0; left: 4px; }
+
+.master-controls { margin-bottom: 18px; }
+.master-controls label { width: 132px; max-width: 100%; }
+
+/* Compact spreadsheet tables; only the shared header is visible. */
+.table-scroll { overflow-x: auto; margin-bottom: 12px; }
+.parameter-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.parameter-table th { font-size: 11px; font-weight: 400; color: #a7aab4; text-align: left; padding: 0 9px 8px; }
+.parameter-table td { padding: 0; border: 1px solid #383b44; background: #1a1c22; position: relative; }
+.parameter-table .field-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.parameter-table label { display: block; }
+.parameter-table input[type=number] { display: block; margin: 0; border: 0; border-radius: 0; background: transparent; padding: 10px 9px; outline: none; width: 100%; appearance: textfield; }
+.parameter-table input::-webkit-inner-spin-button, .parameter-table input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.parameter-table input[readonly] { cursor: cell; user-select: none; }
+.parameter-table input:invalid { box-shadow: inset 0 -2px #f48484; }
+.parameter-table td.selected { background: #273754; }
+.parameter-table td.selected::after { content: ''; position: absolute; inset: 0; border: 1px solid #91adff; pointer-events: none; }
+.parameter-table td:focus { outline: none; }
+.parameter-table td:focus::after, .parameter-table td:focus-within::after { border: 2px solid #a2b5ff; }
+.parameter-table td:has(input:not([readonly]):focus) { background: #1a1c22; }
+.parameter-table .remove-column { width: 42px; }
+.parameter-table .remove-cell { border: 0; background: transparent; padding-left: 6px; }
+.parameter-table .tray-button { width: 34px; height: 34px; border-radius: 5px; }
+.parameter-table .color-column { width: 38px; }
+.parameter-table .color-cell { border: 0; background: transparent; padding-right: 8px; }
+.row-color { display: block; width: 28px; height: 28px; margin: 0; padding: 0; border: 1px solid #555b68; border-radius: 4px; background: transparent; cursor: pointer; }
+.row-color::-webkit-color-swatch-wrapper { padding: 2px; }
+.row-color::-webkit-color-swatch { border: 0; border-radius: 2px; }
+@media (max-width: 480px) { .parameter-table { min-width: 390px; } }
+
+.field-surface { position: relative; aspect-ratio: 1; background: black; }
+.field-surface, .placeholder-square { user-select: none; cursor: grab; }
+.viewport-home { position: absolute; top: 9px; left: 9px; z-index: 2; width: 29px; height: 29px; display: grid; place-items: center; padding: 0; border-radius: 4px; background: #101114b8; color: white; border-color: #ffffff40; }
+.viewport-home:disabled { opacity: .55; }
+.plot-scale { position: absolute; bottom: 12px; right: 12px; color: white; font-size: 10px; text-align: center; pointer-events: none; text-shadow: 0 1px 3px black, 1px 0 3px black; z-index: 2; }
+.plot-scale i { display: block; height: 5px; margin-top: 3px; border: solid white; border-width: 0 1px 1px; filter: drop-shadow(0 1px 1px black); }
+.field-surface.panning, .placeholder-square.panning { cursor: grabbing; }
+.center-squares { position: absolute; inset: 0; width: 100%; height: 100%; }
+.zoom-hint { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 24px; text-align: center; color: white; background: #8888; font-size: 15px; text-shadow: 0 1px 4px #000; pointer-events: none; opacity: 0; transition: opacity 180ms ease-out; }
+.show-zoom-hint .zoom-hint { opacity: 1; }
+
+main { width: 100%; }
+.unified-master { display: grid; grid-template-columns: repeat(3, minmax(0, 200px)); gap: 16px; align-items: end; }
+.unified-master label { width: auto; }
+.edit-mode { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; color: #a7aab4; font-size: 12px; }
+#edit-mode { width: 44px; height: 24px; padding: 3px; background: #343c51; border-color: #57647f; border-radius: 20px; }
+#edit-mode span { display: block; width: 16px; height: 16px; border-radius: 50%; background: #e6e8ed; transition: transform 120ms; }
+#edit-mode[aria-checked=true] span { transform: translateX(18px); }
+.parameter-table td.derived { background: #14161b; }
+.parameter-table td.derived input { color: #747984; box-shadow: none; }
+.parameter-table td.derived.selected { background: #222c40; }
+.plots { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.plots > section { min-width: 0; margin-top: 0; display: block; }
+.plots > section > figure { grid-row: auto; }
+.plots .view-controls, .plots .placeholder-controls { height: 64px; min-height: 0; margin-bottom: 16px; align-items: end; }
+.plots .view-controls label, .plots .placeholder-controls label { font-size: 11px; white-space: nowrap; }
+.plots .plot { padding-left: 0; }
+.plots .u-axis { left: 0; }
+.plots .v-axis { left: -14px; }
+.plots .legends { padding-left: 0; }
+.plots .view-controls { grid-template-columns: minmax(70px, 132px) 96px auto 52px; justify-content: end; gap: 8px; }
+.plots .speed-controls button { width: 28px; }
+.unified-table { min-width: 660px; }
+@media (max-width: 680px) { .plots { grid-template-columns: minmax(0, 1fr); gap: 32px; } }
+@media (max-width: 600px) { .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; } }
+
+.parameter-table .select-column { width: 30px; padding: 0 8px 8px 0; }
+.parameter-table .select-cell { width: 30px; border: 0; background: transparent; padding-right: 8px; }
+input[type=checkbox] { width: 16px; height: 16px; margin: 0; padding: 0; vertical-align: middle; accent-color: #91adff; cursor: pointer; }
+.parameter-table tr.row-selected td:not(.remove-cell):not(.color-cell):not(.select-cell) { background: #263b57; }
+.parameter-table tr.row-selected td.derived { background: #202e43; }
+.parameter-table tr.row-selected td.selected { background: #344b70; }
+.plots .view-controls { grid-template-columns: minmax(70px, 132px) auto 52px; }
+.plot-controls-spacer { height: 80px; }
+.field-surface .legends { position: absolute; bottom: 12px; left: 12px; z-index: 2; width: min(50%, 212px); padding: 7px 9px; margin: 0; flex-direction: column; gap: 6px; background: #101114b3; border: 1px solid #ffffff26; border-radius: 5px; pointer-events: none; }
+.field-surface .legends .ramp { height: 12px; border-radius: 2px; }
+.field-surface .legends .ends { font-size: 8px; margin-top: 3px; color: #d1d5de; gap: 3px; }
+.tray-button { transition: background 120ms, border-color 120ms, color 120ms; }
+.tray-button:hover { background: #51212b; border-color: #f87984; color: #ffb0b6; }
+.app-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 19px; font-weight: 600; }
+.app-brand img { display: block; border-radius: 5px; }
+
+.plot-controls-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.plot-controls-bar > .add-button { width: 132px; max-width: 25%; }
+.plot-controls-bar .view-controls { display: grid; grid-template-columns: minmax(70px, 132px) auto 52px; justify-content: end; align-items: center; gap: 8px; margin: 0; }
+.plot-controls-bar .speed-controls button { width: 28px; }
+
+.plots .plot { padding: 0; }
+.unified-master { grid-template-columns: repeat(3, minmax(0, 200px)) 1fr; }
+.file-controls { display: flex; gap: 8px; justify-self: end; }
+.file-controls button { min-width: 64px; }
+@media (max-width: 600px) {
+  .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .file-controls { grid-column: 1 / -1; }
+}
