@@ -131,6 +131,7 @@ main { width: 100%; }
 .plots .speed-controls button { width: 28px; }
 .unified-table { min-width: 0; }
 .parameter-table th { white-space: nowrap; }
+.unified-master label { min-width: 0; white-space: nowrap; }
 .brand-icon:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 0 12px #91adff99; }
 @media (max-width: 680px) { .plots { grid-template-columns: minmax(0, 1fr); gap: 32px; } }
 @media (max-width: 600px) { .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; } }

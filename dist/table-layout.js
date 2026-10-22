@@ -42,6 +42,13 @@ export function setupTableLayout(table) {
       const abbreviated = measure.measureText(full.textContent).width + 20 > width;
       full.hidden = abbreviated; compact.hidden = !abbreviated;
     });
+    for (const label of document.querySelectorAll('.unified-master label')) {
+      const full = label.querySelector('.header-full'), compact = label.querySelector('.header-compact');
+      if (!full || !compact) continue;
+      measure.font = fontOf(label);
+      const abbreviated = measure.measureText(full.textContent).width > label.getBoundingClientRect().width;
+      full.hidden = abbreviated; compact.hidden = !abbreviated;
+    }
   }
   const schedule = () => { if (frame === null) frame = requestAnimationFrame(layout); };
   new ResizeObserver(schedule).observe(table.parentElement);
