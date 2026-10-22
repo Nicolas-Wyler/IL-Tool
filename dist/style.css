@@ -251,3 +251,6 @@ body.fits-viewport { overflow-y: hidden; }
   .app-brand .file-controls .icon-button { min-width: 24px; width: 24px; }
   #project-title { font-size: 12px; padding: 4px; }
 }
+
+.unified-master > label { display: flex; flex-direction: column; align-items: stretch; }
+.unified-master label > input { display: block; }
