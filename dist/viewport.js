@@ -42,9 +42,13 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
   hint.textContent = 'Use Cmd/Ctrl + mouse wheel to zoom';
   surface.append(home, scale, hint);
   let hintTimer, homeTimer;
+  const hideHome = () => {
+    if (drag || touch || motion !== null || wheelTimer !== null) { homeTimer = setTimeout(hideHome, 650); return; }
+    surface.classList.remove('show-home');
+  };
   const showHome = () => {
     clearTimeout(homeTimer); surface.classList.add('show-home');
-    homeTimer = setTimeout(() => surface.classList.remove('show-home'), 650);
+    homeTimer = setTimeout(hideHome, 650);
   };
   surface.addEventListener('pointerenter', showHome);
   const baseWidth = () => getWidth ? getWidth() : numberValue(widthInput);
@@ -138,11 +142,15 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
     if (!Number.isFinite(width) || width <= 0) return;
     drag = { pointer: event.pointerId, px: event.clientX, py: event.clientY, x: view.x, y: view.y,
       stepX: width / rect.width, stepY: width / rect.height, lastX: event.clientX, lastY: event.clientY, time: event.timeStamp, vx: 0, vy: 0 };
-    surface.setPointerCapture(event.pointerId); surface.classList.add('panning');
+    surface.setPointerCapture(event.pointerId); surface.classList.add('panning'); showHome();
   });
   surface.addEventListener('pointermove', event => {
-    showHome();
-    if (!drag || drag.pointer !== event.pointerId) return;
+    if (!drag || drag.pointer !== event.pointerId) {
+      const rect = home.getBoundingClientRect();
+      if (event.pointerType !== 'touch' && event.clientX >= rect.left && event.clientX <= rect.right
+          && event.clientY >= rect.top && event.clientY <= rect.bottom) showHome();
+      return;
+    }
     const dt = Math.max(8, event.timeStamp - drag.time);
     drag.vx = -(event.clientX - drag.lastX) * drag.stepX / dt;
     drag.vy = (event.clientY - drag.lastY) * drag.stepY / dt;
@@ -153,7 +161,7 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
   const endDrag = event => {
     if (!drag) return;
     const velocity = event.type === 'pointerup' && event.timeStamp - drag.time < 80 ? drag : {};
-    drag = null; surface.classList.remove('panning'); settle(velocity);
+    drag = null; surface.classList.remove('panning'); showHome(); settle(velocity);
   };
   surface.addEventListener('pointerup', endDrag);
   surface.addEventListener('pointercancel', endDrag);
@@ -168,7 +176,7 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
   const beginTouch = event => {
     cancelMotion();
     touch = { ...touchGeometry(event.touches), count: event.touches.length, view: { ...view }, last: { ...view }, width: bounds().width, time: event.timeStamp };
-    surface.classList.add('panning');
+    surface.classList.add('panning'); showHome();
   };
   surface.addEventListener('touchstart', event => {
     if (event.target.closest('button')) return;
@@ -192,7 +200,7 @@ export function setupViewport(surface, { widthInput, getWidth, recenter, minZoom
       if (event.type !== 'touchcancel' && event.touches.length === 1) { beginTouch(event); return; }
       const velocity = event.timeStamp - touch.time < 80 ? touch.velocity ?? {} : {};
       touch = null; oneFingerUntil = event.type === 'touchcancel' ? 0 : performance.now() + SINGLE_FINGER_WINDOW;
-      surface.classList.remove('panning'); settle(velocity);
+      surface.classList.remove('panning'); showHome(); settle(velocity);
     }
   };
   surface.addEventListener('touchend', endTouch); surface.addEventListener('touchcancel', endTouch);

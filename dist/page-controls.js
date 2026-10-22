@@ -3,7 +3,22 @@ import { SNAP_DURATION } from './viewport.js';
 export function setupPageControls() {
   const scroll = document.querySelector('.app-scroll');
   const content = document.querySelector('.scroll-content');
+  const releaseTouchButton = () => document.querySelectorAll('.touch-pressed').forEach(button => button.classList.remove('touch-pressed'));
+  document.addEventListener('pointerdown', event => {
+    const touch = event.pointerType === 'touch';
+    document.body.classList.toggle('touch-input', touch); releaseTouchButton();
+    const button = event.target.closest('.file-controls .icon-button');
+    if (touch && button && !button.disabled) button.classList.add('touch-pressed');
+  });
+  document.addEventListener('pointermove', event => {
+    if (event.pointerType === 'mouse' && !event.sourceCapabilities?.firesTouchEvents) document.body.classList.remove('touch-input');
+  });
+  for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, releaseTouchButton);
+  window.addEventListener('blur', releaseTouchButton);
   const header = document.querySelector('.app-brand');
+  const brandName = header.querySelector('.brand-name');
+  const brandIcon = header.querySelector('.brand-icon');
+  const fileControls = header.querySelector('.file-controls');
   const controls = document.querySelector('.plot-controls-bar .view-controls');
   const slot = document.createElement('div'); slot.className = 'view-controls-slot';
   controls.before(slot); slot.append(controls);
@@ -19,6 +34,14 @@ export function setupPageControls() {
     controls.style.width = pinned ? `${rect.width}px` : '';
   }
   function layout() {
+    const gap = parseFloat(getComputedStyle(header).columnGap) || 0;
+    const available = header.clientWidth - fileControls.getBoundingClientRect().width - brandIcon.getBoundingClientRect().width - 2 * gap;
+    const hideBrand = available - Math.ceil(brandName.scrollWidth) - gap < 160;
+    const hideProject = hideBrand && available < 160;
+    const changed = header.classList.contains('hide-project-title') !== hideProject;
+    header.classList.toggle('hide-brand-name', hideBrand);
+    header.classList.toggle('hide-project-title', hideProject);
+    if (changed) document.dispatchEvent(new Event('headervisibilitychange'));
     headerBottom = header.offsetTop + header.offsetHeight;
     const reserve = `${Math.max(0, headerBottom + 8 - scroll.offsetTop)}px`;
     if (content.style.getPropertyValue('--header-reserve') !== reserve) content.style.setProperty('--header-reserve', reserve);
@@ -26,7 +49,7 @@ export function setupPageControls() {
   }
   const fits = () => document.body.classList.toggle('fits-viewport', scroll.scrollHeight <= scroll.clientHeight + 1);
   const observer = new ResizeObserver(layout);
-  for (const element of [scroll, content, header, slot, document.querySelector('.plot-controls-bar')]) observer.observe(element);
+  for (const element of [scroll, content, header, brandName, fileControls, slot, document.querySelector('.plot-controls-bar')]) observer.observe(element);
   window.addEventListener('resize', layout);
   scroll.addEventListener('scroll', handoff, { passive: true });
   layout();

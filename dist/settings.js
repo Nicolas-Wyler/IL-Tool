@@ -53,7 +53,7 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     const changed = dirty(), name = cleanProjectName(nameInput.value);
     title.textContent = name + (changed ? '*' : '');
     title.dataset.dirty = String(changed);
-    const narrow = matchMedia('(max-width: 900px)').matches;
+    const narrow = document.querySelector('.app-brand').classList.contains('hide-project-title');
     load.textContent = `Load${changed && narrow ? '*' : ''}`;
     load.setAttribute('aria-label', changed && narrow ? 'Load, unsaved changes' : 'Load');
     title.setAttribute('aria-label', `${name}${changed ? ', unsaved changes' : ''}. Rename project`);
@@ -83,7 +83,10 @@ export function setupFileControls({ capture, restore, checkpoint }) {
   }
   settingsName.addEventListener('input', () => { nameInput.value = settingsName.value; refresh(); });
   settingsName.addEventListener('change', () => { nameInput.value = cleanProjectName(settingsName.value); refresh(); });
-  matchMedia('(max-width: 900px)').addEventListener('change', event => { if (event.matches) commitName(); refresh(); });
+  document.addEventListener('headervisibilitychange', () => {
+    if (document.querySelector('.app-brand').classList.contains('hide-project-title')) commitName();
+    refresh();
+  });
   document.querySelector('#close-name-prompt').addEventListener('click', () => prompt.close('cancel'));
   document.querySelector('#name-prompt-form').addEventListener('submit', event => {
     if (!promptInput.value.trim()) { event.preventDefault(); promptInput.focus(); return; }
