@@ -293,3 +293,9 @@ button, select, .github-link { -webkit-tap-highlight-color: transparent; }
 body.touch-input button:not(:disabled):active, body.touch-input button.touch-pressed { filter: brightness(1.16); border-color: #a2b5ff; }
 body.touch-input .app-brand .file-controls .icon-button.touch-pressed { background: #36435d; border-color: transparent; }
 .brand-icon { border-radius: 10%; }
+
+/* Frost only the individual overlays, leaving the gaps between controls clear. */
+.view-controls select, .view-controls button, .viewport-home, .field-surface .legends {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
