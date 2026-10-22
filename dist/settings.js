@@ -32,6 +32,17 @@ export function setupFileControls({ capture, restore, checkpoint }) {
   const save = document.querySelector('#save');
   const load = document.querySelector('#load');
   const input = document.querySelector('#load-file');
+  save.setAttribute('aria-keyshortcuts', 'Meta+S Control+S');
+  load.setAttribute('aria-keyshortcuts', 'Meta+O Control+O');
+  save.title = 'Save (Cmd/Ctrl+S)';
+  load.title = 'Load (Cmd/Ctrl+O)';
+  document.addEventListener('keydown', event => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.isComposing) return;
+    const button = { s: save, o: load }[event.key.toLowerCase()];
+    if (!button) return;
+    event.preventDefault(); event.stopPropagation();
+    if (!event.repeat) button.click();
+  }, true);
   const type = { description: 'IL Tool settings', accept: { 'application/json': ['.iltool', '.json'] } };
   function message(text) {
     const toast = document.createElement('div');

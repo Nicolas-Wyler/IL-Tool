@@ -1,4 +1,4 @@
-const CACHE = 'plane-wave-v27-local';
+const CACHE = 'plane-wave-v28-local';
 const ASSETS = ['./', './index.html', './style.css', './app.js', './settings.js', './field.js', './updates.js', './gratings.js', './grating-geometry.js', './center-squares.js', './linked-rows.js', './numbers.js', './history.js', './framing.js', './persistence.js', './table.js', './viewport.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
