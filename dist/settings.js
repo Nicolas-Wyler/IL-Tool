@@ -3,7 +3,7 @@ const FORMAT = 'IL Tool';
 const VERSION = 1;
 const views = ['complex', 'intensity', 'phase', 'realSquared'];
 const numericText = value => typeof value === 'string' && (value === '' || Number.isFinite(Number(value)));
-const camera = value => value && [value.zoom, value.x, value.y].every(Number.isFinite) && value.zoom >= .05 && value.zoom <= 100;
+const camera = value => value && [value.zoom, value.x, value.y].every(Number.isFinite) && value.zoom >= .025 && value.zoom <= 100;
 export const cleanProjectName = name => String(name ?? '').trim() || 'Untitled';
 export function projectFilename(name) {
   return `${cleanProjectName(name).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-')}.iltool`;
@@ -40,8 +40,11 @@ export function parseSettings(text) {
 }
 
 export function setupFileControls({ capture, restore, checkpoint }) {
-  const save = document.querySelector('#save'), load = document.querySelector('#load'), input = document.querySelector('#load-file');
+  const exportButton = document.querySelector('#export'), load = document.querySelector('#load'), input = document.querySelector('#load-file');
   const nameInput = document.querySelector('#project-name'), title = document.querySelector('#project-title');
+  const settingsName = document.querySelector('#settings-project-name'), prompt = document.querySelector('#name-prompt');
+  const promptInput = document.querySelector('#prompt-project-name');
+  let resolveName = null;
   let baseline = nameInput.dataset.savedFingerprint || projectFingerprint(capture());
   let editingName = false, editStart = nameInput.value, suppressUnload = false;
   nameInput.dataset.savedFingerprint = baseline;
@@ -51,6 +54,7 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     title.textContent = name + (changed ? '*' : '');
     title.dataset.dirty = String(changed);
     title.setAttribute('aria-label', `${name}${changed ? ', unsaved changes' : ''}. Rename project`);
+    if (settingsName.value !== nameInput.value) settingsName.value = nameInput.value;
   }
   function commitName(cancel = false) {
     if (!editingName) return;
@@ -70,9 +74,29 @@ export function setupFileControls({ capture, restore, checkpoint }) {
       event.preventDefault(); commitName(event.key === 'Escape'); title.focus();
     }
   });
-  function markSaved() {
-    baseline = projectFingerprint(capture()); nameInput.dataset.savedFingerprint = baseline; refresh();
+  function markSaved(snapshot = capture()) {
+    baseline = projectFingerprint(snapshot); nameInput.dataset.savedFingerprint = baseline; refresh();
+    document.dispatchEvent(new Event('viewchange'));
   }
+  settingsName.addEventListener('input', () => { nameInput.value = settingsName.value; refresh(); });
+  settingsName.addEventListener('change', () => { nameInput.value = cleanProjectName(settingsName.value); refresh(); });
+  matchMedia('(max-width: 900px)').addEventListener('change', event => { if (event.matches) commitName(); });
+  document.querySelector('#close-name-prompt').addEventListener('click', () => prompt.close('cancel'));
+  document.querySelector('#name-prompt-form').addEventListener('submit', event => {
+    if (!promptInput.value.trim()) { event.preventDefault(); promptInput.focus(); return; }
+    nameInput.value = cleanProjectName(promptInput.value);
+    nameInput.dispatchEvent(new Event('change', { bubbles: true })); refresh();
+  });
+  prompt.addEventListener('close', () => {
+    resolveName?.(prompt.returnValue === 'export'); resolveName = null;
+  });
+  const ensureProjectName = () => {
+    commitName();
+    if (cleanProjectName(nameInput.value).toLowerCase() !== 'untitled') return Promise.resolve(true);
+    return new Promise(resolve => {
+      resolveName = resolve; promptInput.value = ''; prompt.returnValue = 'cancel'; prompt.showModal(); promptInput.focus();
+    });
+  };
   document.addEventListener('projectrestore', () => {
     baseline = nameInput.dataset.savedFingerprint || projectFingerprint(capture());
     nameInput.dataset.savedFingerprint = baseline;
@@ -83,12 +107,12 @@ export function setupFileControls({ capture, restore, checkpoint }) {
   window.addEventListener('beforeunload', event => {
     if (!suppressUnload && dirty()) { event.preventDefault(); event.returnValue = ''; }
   });
-  save.setAttribute('aria-keyshortcuts', 'Meta+S Control+S'); load.setAttribute('aria-keyshortcuts', 'Meta+O Control+O');
-  save.title = 'Save (Cmd/Ctrl+S)'; load.title = 'Load (Cmd/Ctrl+O)';
+  exportButton.setAttribute('aria-keyshortcuts', 'Meta+S Control+S'); load.setAttribute('aria-keyshortcuts', 'Meta+O Control+O');
+  exportButton.title = 'Export (Cmd/Ctrl+S)'; load.title = 'Load (Cmd/Ctrl+O)';
   document.addEventListener('keydown', event => {
     if (document.querySelector('dialog[open]')) return;
     if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.isComposing) return;
-    const button = { s: save, o: load }[event.key.toLowerCase()];
+    const button = { s: exportButton, o: load }[event.key.toLowerCase()];
     if (!button) return;
     event.preventDefault(); event.stopPropagation(); if (!event.repeat) button.click();
   }, true);
@@ -105,16 +129,6 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     document.dispatchEvent(new Event('viewchange', { bubbles: true })); message('Loaded');
   }
   function failed(error) { if (error.name !== 'AbortError') message(error.message || 'Could not open file.'); }
-  save.addEventListener('click', () => {
-    try {
-      commitName();
-      const file = new Blob([serializeSettings(capture())], { type: 'application/json' });
-      const url = URL.createObjectURL(file), link = document.createElement('a');
-      link.href = url; link.download = projectFilename(nameInput.value); link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      markSaved(); message('Saved');
-    } catch (error) { failed(error); }
-  });
   load.addEventListener('click', async () => {
     commitName();
     if (dirty() && !window.confirm('Discard unsaved changes and load another project?')) return;
@@ -124,4 +138,5 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     try { if (input.files[0]) await open(input.files[0]); } catch (error) { failed(error); } finally { input.value = ''; }
   });
   refresh();
+  return { ensureProjectName, markSaved };
 }

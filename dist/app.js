@@ -216,7 +216,7 @@ function syncSelection() {
   }
 }
 fieldViewport = setupViewport(document.querySelector('.field-surface'), {
-  getWidth: () => interferenceWidth(captureRows().map(row => waveFromRow(row, numberValue(wavelengthInput))), numberValue(wavelengthInput)), unit: 'nm', render
+  getWidth: () => interferenceWidth(captureRows().map(row => waveFromRow(row, numberValue(wavelengthInput))), numberValue(wavelengthInput)), elasticZoom: true, unit: 'nm', render
 });
 table = setupTable(document.querySelector('#wave-table'), {
   addRow: () => { addWave(); recolorRows(); },
@@ -301,8 +301,9 @@ document.addEventListener('keydown', event => {
   if (event.shiftKey) history.redo(); else history.undo();
 }, true);
 
-setupFileControls({ capture: state.capture, restore: saved => state.restore({ ...saved, presetVersion: DEFAULT_PRESET }), checkpoint: () => history.checkpoint() });
-setupExport({ capture: state.capture, fieldBounds: () => fieldViewport.bounds(), maskBounds: () => gratings.bounds(), valid: readParameters });
+const projectControls = setupFileControls({ capture: state.capture, restore: saved => state.restore({ ...saved, presetVersion: DEFAULT_PRESET }), checkpoint: () => history.checkpoint() });
+setupExport({ capture: state.capture, fieldBounds: () => fieldViewport.bounds(), maskBounds: () => gratings.bounds(), valid: readParameters,
+  prepare: projectControls.ensureProjectName, onExport: projectControls.markSaved });
 setupPreferences({ getResolution: () => exportResolution, setResolution: value => { exportResolution = value; } });
 setupTableLayout(document.querySelector('#wave-table'));
 

@@ -83,10 +83,11 @@ async function pngWithOverlays(canvas, overlays, resolution) {
   } finally { URL.revokeObjectURL(url); }
 }
 
-export function setupExport({ capture, fieldBounds, maskBounds, valid }) {
+export function setupExport({ capture, fieldBounds, maskBounds, valid, prepare, onExport }) {
   const button = document.querySelector('#export');
   button.addEventListener('click', async () => {
     if (!valid()) return;
+    if (!await prepare()) return;
     button.disabled = true; button.setAttribute('aria-busy', 'true');
     try {
       // Capture both viewports and one physical instant before asynchronous encoding.
@@ -123,6 +124,7 @@ export function setupExport({ capture, fieldBounds, maskBounds, valid }) {
         displayIntensityDivisor: ceiling, csvValues: 'raw, unnormalized; phase at exact zero is undefined' }, null, 2) });
       const zip = await zipFiles(files), url = URL.createObjectURL(zip), link = document.createElement('a');
       link.href = url; link.download = projectFilename(snapshot.projectName).replace(/\.iltool$/, '.zip'); link.click();
+      onExport(snapshot);
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
       const message = document.createElement('div'); message.className = 'update-toast'; message.role = 'status';
