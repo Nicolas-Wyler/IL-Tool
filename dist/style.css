@@ -188,10 +188,11 @@ input[type=checkbox]:hover { outline: 2px solid #a2b5ff; outline-offset: 2px; }
 .app-brand .file-controls { margin-left: auto; font-size: 14px; }
 .app-brand #update { margin-left: 0; }
 .unified-master { grid-template-columns: repeat(3, minmax(0, 200px)) minmax(max-content, 1fr); }
-.unified-master .edit-mode { margin: 0 0 9px; white-space: nowrap; justify-self: end; }
+.unified-master .edit-mode { align-self: start; height: 16.8px; margin: 0; white-space: nowrap; justify-self: end; }
+.unified-master sub { line-height: 0; }
 @media (max-width: 600px) {
   .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 8px; }
-  .unified-master .edit-mode { gap: 4px; font-size: 10px; }
+  .unified-master .edit-mode { height: 15.4px; gap: 4px; font-size: 10px; }
 }
 @media (max-width: 380px) { .app-brand .file-controls button { min-width: 0; padding: 8px; } }
 
