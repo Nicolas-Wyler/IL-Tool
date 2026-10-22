@@ -4,6 +4,11 @@ import { formatNumber, numberValue } from '../dist/numbers.js';
 import { maskBounds, maskWidth, centerIfFits, maskViewCenter, interferenceWidth } from '../dist/framing.js';
 import { defaultRows, linkRow, gratingAzimuth, waveFromRow } from '../dist/linked-rows.js';
 import { gratingSquare } from '../dist/grating-geometry.js';
+import { distributeColumns } from '../dist/table-layout.js';
+
+assert.deepEqual(distributeColumns(600, [50,100,150]), [200,200,200]);
+assert.deepEqual(distributeColumns(330, [50,100,150]), [80,100,150]);
+assert.deepEqual(distributeColumns(250, [50,100,150]), [50,100,150]);
 
 let state = { value: 1, rows: ['a'], colors: ['#123abc'] };
 const history = createHistory({ capture: () => state, restore: saved => { state = saved; } });

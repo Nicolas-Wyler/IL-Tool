@@ -1,4 +1,5 @@
 import { setupPageControls } from './page-controls.js';
+import { setupTableLayout } from './table-layout.js';
 import { setupExport } from './exports.js';
 import { setupPreferences, DEFAULT_RESOLUTION, validResolution } from './preferences.js';
 import { setupFileControls } from './settings.js';
@@ -303,5 +304,6 @@ document.addEventListener('keydown', event => {
 setupFileControls({ capture: state.capture, restore: saved => state.restore({ ...saved, presetVersion: DEFAULT_PRESET }), checkpoint: () => history.checkpoint() });
 setupExport({ capture: state.capture, fieldBounds: () => fieldViewport.bounds(), maskBounds: () => gratings.bounds(), valid: readParameters });
 setupPreferences({ getResolution: () => exportResolution, setResolution: value => { exportResolution = value; } });
+setupTableLayout(document.querySelector('#wave-table'));
 
 setupPageControls();

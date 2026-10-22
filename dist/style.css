@@ -129,7 +129,9 @@ main { width: 100%; }
 .plots .legends { padding-left: 0; }
 .plots .view-controls { grid-template-columns: minmax(70px, 132px) 96px auto 52px; justify-content: end; gap: 8px; }
 .plots .speed-controls button { width: 28px; }
-.unified-table { min-width: 660px; }
+.unified-table { min-width: 0; }
+.parameter-table th { white-space: nowrap; }
+.brand-icon:not(:disabled):hover { filter: brightness(1.2); box-shadow: 0 0 12px #91adff99; }
 @media (max-width: 680px) { .plots { grid-template-columns: minmax(0, 1fr); gap: 32px; } }
 @media (max-width: 600px) { .unified-master { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; } }
 

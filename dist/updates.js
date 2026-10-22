@@ -35,27 +35,7 @@ export function setupUpdates({ capture, restore }) {
     requestAnimationFrame(() => { toast.textContent = 'Updated'; });
     setTimeout(() => toast.remove(), 2500);
   }
-  if (localDevelopment) {
-    let revision = null;
-    let checking = false;
-    const check = async () => {
-      if (checking || refreshing) return;
-      checking = true;
-      try {
-        const response = await fetch('/__dev/version', { cache: 'no-store' });
-        if (!response.ok) return;
-        const current = (await response.json()).revision;
-        if (typeof current !== 'string') return;
-        if (revision !== null && current !== revision) reload();
-        revision = current;
-      } catch { /* Keep the offline app usable during local server restarts. */ }
-      finally { checking = false; }
-    };
-    check();
-    setInterval(check, 750);
-    window.addEventListener('focus', check);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
-  }
+  document.addEventListener('developmentreload', event => { event.preventDefault(); reload(); });
   if (!('serviceWorker' in navigator)) return;
   let controlled = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
