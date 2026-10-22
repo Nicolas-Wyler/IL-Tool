@@ -193,11 +193,12 @@ input[type=checkbox]:hover { outline: 2px solid #a2b5ff; outline-offset: 2px; }
 
 .plots { width: 100%; max-width: 1292px; margin-inline: auto; }
 @media (max-width: 680px) { .plots { max-width: 640px; } }
-html, body { overscroll-behavior: none; }
+html, body { overscroll-behavior-x: none; overscroll-behavior-y: auto; }
+html:has(body.fits-viewport), body.fits-viewport { overscroll-behavior-y: none; }
 body { overflow-x: hidden; }
 body.fits-viewport { overflow-y: hidden; }
 .table-scroll { overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
-.app-brand { position: relative; --header-control-height: 42px; }
+.app-brand { position: sticky; top: 0; z-index: 10; padding-block: 12px; margin-top: -12px; margin-bottom: 8px; background: #101114; --header-control-height: 42px; }
 .app-brand .file-controls button { height: var(--header-control-height); }
 .app-brand .file-controls .icon-button { min-width: 28px; width: 28px; padding: 3px; display: grid; place-items: center; color: #e6e8ed; background: transparent; border-color: transparent; }
 .app-brand .file-controls .icon-button:not(:disabled):hover { background: #242a37; border-color: transparent; }
@@ -238,7 +239,7 @@ body.fits-viewport { overflow-y: hidden; }
 @media (max-width: 900px) {
   .app-brand { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
   .app-brand .file-controls { margin-left: 0; grid-column: 1 / -1; grid-row: 2; justify-self: end; }
-  .project-title { top: calc(var(--header-control-height) / 2); min-width: 0; max-width: max(60px, calc(100% - 320px)); }
+  .project-title { top: calc(var(--header-control-height) / 2 + 12px); min-width: 0; max-width: max(60px, calc(100% - 320px)); }
   .project-title:has(#project-name:not([hidden])) { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 }
 @media (max-width: 380px) {
