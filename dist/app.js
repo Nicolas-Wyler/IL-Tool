@@ -272,6 +272,7 @@ const state = {
   }
 };
 state.restore({ schemaVersion: 3, rows: defaultRows(), wavelength: '3.1', editMode: 'pitch' });
+const initialProgram = state.capture();
 setupPersistence(state);
 setupUpdates(state);
 
@@ -304,7 +305,13 @@ document.addEventListener('keydown', event => {
 const projectControls = setupFileControls({ capture: state.capture, restore: saved => state.restore({ ...saved, presetVersion: DEFAULT_PRESET }), checkpoint: () => history.checkpoint() });
 setupExport({ capture: state.capture, fieldBounds: () => fieldViewport.bounds(), maskBounds: () => gratings.bounds(), valid: readParameters,
   prepare: projectControls.ensureProjectName, onExport: projectControls.markSaved });
-setupPreferences({ getResolution: () => exportResolution, setResolution: value => { exportResolution = value; } });
+setupPreferences({ getResolution: () => exportResolution, setResolution: value => { exportResolution = value; }, resetProgram: () => {
+  history.checkpoint();
+  const current = state.capture();
+  state.restore({ ...initialProgram, projectName: current.projectName, projectSavedFingerprint: current.projectSavedFingerprint,
+    exportResolution: current.exportResolution });
+  history.checkpoint(); document.dispatchEvent(new Event('viewchange'));
+} });
 setupTableLayout(document.querySelector('#wave-table'));
 
 setupPageControls();
