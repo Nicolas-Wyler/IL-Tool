@@ -71,7 +71,7 @@ function syncRows() {
     row.dataset.angleSign = linked.angleSign;
     for (const name of rowNames) {
       const input = row.querySelector(`[name="${name}"]`);
-      const derived = name === 'radius' || (editMode === 'pitch' ? name === 'theta' || name === 'phase' : name === 'pitch');
+      const derived = name === 'radius' || name === 'phase' || (editMode === 'pitch' ? name === 'theta' : name === 'pitch');
       input.dataset.derived = String(derived);
       if (derived) setNumber(input, linked[name]);
       input.required = !derived;
@@ -125,7 +125,7 @@ function render() {
   context.putImageData(pixels, 0, 0);
   document.querySelector('#intensity-max').textContent = '1';
   canvas.parentElement.dataset.view = mode;
-  document.querySelector('#intensity-label').textContent = mode === 'realSquared' ? '[Re(Ẽ)]² [a.u.]' : '|Ẽ|² [a.u.]';
+  document.querySelector('#intensity-label').textContent = mode === 'realSquared' ? '[Re(Ẽ)]² (a.u.)' : '|Ẽ|² (a.u.)';
   document.querySelector('#brightness-legend').hidden = mode === 'phase';
   document.querySelector('#phase-legend').hidden = mode === 'intensity' || mode === 'realSquared';
   canvas.setAttribute('aria-label', `${view.selectedOptions[0].textContent} heatmap, ${bounds.width} nm square, ${parameters.waves.length} waves`);

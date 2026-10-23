@@ -30,7 +30,7 @@ function legendSVG(mode, displaySize) {
   let result = gradients + `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${5 * s}" fill="#101114" fill-opacity=".7" stroke="#ffffff" stroke-opacity=".15" stroke-width="${s}"/>`;
   let top = y + 7 * s;
   if (brightness) {
-    const label = mode === 'realSquared' ? '[Re(Ẽ)]² [a.u.]' : '|Ẽ|² [a.u.]';
+    const label = mode === 'realSquared' ? '[Re(Ẽ)]² (a.u.)' : '|Ẽ|² (a.u.)';
     if (complex) { result += labels(top + 8 * s, '0', label, '1'); top += 14 * s; }
     result += ramp(top, 'brightness'); top += 12 * s;
     if (!complex) { result += labels(top + 11 * s, '0', label, '1'); top += 14 * s; }

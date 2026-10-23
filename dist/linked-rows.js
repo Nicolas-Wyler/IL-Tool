@@ -22,7 +22,6 @@ export function linkRow(row, wavelength, workingDistance, mode) {
     const valid = numeric(row.pitch) && wavelength > 0 && Number(row.pitch) > wavelength;
     const theta = valid ? sign * Math.asin(wavelength / Number(row.pitch)) * 180 / Math.PI : NaN;
     linked.theta = display(theta);
-    linked.phase = valid ? display(phaseFromPath(wavelength, workingDistance, theta)) : '';
     linked.angleSign = sign;
   } else {
     const theta = Number(row.theta);
@@ -30,6 +29,7 @@ export function linkRow(row, wavelength, workingDistance, mode) {
       ? display(pitchFromTheta(wavelength, theta)) : '';
     linked.angleSign = numeric(row.theta) ? (theta < 0 ? -1 : 1) : row.angleSign ?? 1;
   }
+  linked.phase = numeric(linked.theta) ? display(phaseFromPath(wavelength, workingDistance, Number(linked.theta))) : '';
   linked.radius = numeric(linked.theta) && Math.abs(Number(linked.theta)) < 90 && workingDistance >= 0
     ? display(workingDistance * Math.tan(Math.abs(Number(linked.theta)) * Math.PI / 180)) : '';
   return linked;
