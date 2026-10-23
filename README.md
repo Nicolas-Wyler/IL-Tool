@@ -4,7 +4,7 @@ Interference lithography visualizer with linked wave/grating parameters, coheren
 
 [Open IL Tool](https://nicolas-wyler.github.io/IL-Tool/)
 
-Install from Chrome, or use Safari → Share → Add to Home Screen on iPhone. Open once online to cache the app; it then runs offline. Load restores an exported project file. Export downloads a named ZIP with the project, vector mask, four PNG views, raw CSV matrices, and coordinates.
+Install from Chrome, or use Safari → Share → Add to Home Screen on iPhone. Open once online to cache the app; it then runs offline. Load opens an exported ZIP and restores the project inside; standalone project files also work. Export downloads a named ZIP with the project, vector mask, four PNG views, raw CSV matrices, and coordinates.
 
 Run locally: `python3 serve_local.py` → <http://127.0.0.1:8769/>. Saved edits refresh the local app automatically. Pushes to `main` deploy to GitHub Pages.
 

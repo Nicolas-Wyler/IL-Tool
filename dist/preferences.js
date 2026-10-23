@@ -1,5 +1,5 @@
 import { numberValue, setNumber } from './numbers.js';
-export const APP_VERSION = '1.1.3';
+export const APP_VERSION = '1.1.4';
 export const DEFAULT_RESOLUTION = 640;
 export const validResolution = value => Number.isInteger(value) && value >= 1 && value <= 4096;
 

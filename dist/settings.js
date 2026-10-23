@@ -1,3 +1,4 @@
+import { readProjectFile } from './project-import.js';
 import { validResolution } from './preferences.js';
 const FORMAT = 'IL Tool';
 const VERSION = 1;
@@ -128,21 +129,30 @@ export function setupFileControls({ capture, restore, checkpoint }) {
     document.body.append(toast); setTimeout(() => toast.remove(), 2500);
   }
   async function open(file) {
-    if (file.size > 10 * 1024 * 1024) throw new Error('File is too large.');
-    const saved = parseSettings(await file.text());
+    const { name, settings: saved } = await readProjectFile(file, parseSettings);
     checkpoint();
-    restore({ ...saved, projectName: cleanProjectName(file.name.replace(/\.(iltool|json)$/i, '')), projectSavedFingerprint: null });
+    restore({ ...saved, projectName: cleanProjectName(name), projectSavedFingerprint: null });
     markSaved(); checkpoint();
     document.dispatchEvent(new Event('viewchange', { bubbles: true })); message('Loaded');
   }
-  function failed(error) { if (error.name !== 'AbortError') message(error.message || 'Could not open file.'); }
+  const errorDialog = document.querySelector('#load-error');
+  document.querySelector('#close-load-error').addEventListener('click', () => errorDialog.close());
+  errorDialog.addEventListener('close', () => { if (!document.querySelector('dialog[open]')) document.body.classList.remove('settings-open'); });
+  function failed(error) {
+    if (error.name === 'AbortError') return;
+    document.querySelector('#load-error-message').textContent = error.message || 'Could not load this project.';
+    errorDialog.showModal(); document.body.classList.add('settings-open');
+  }
   load.addEventListener('click', async () => {
     commitName();
     if (dirty() && !window.confirm('Discard unsaved changes and load another project?')) return;
     input.click();
   });
   input.addEventListener('change', async () => {
-    try { if (input.files[0]) await open(input.files[0]); } catch (error) { failed(error); } finally { input.value = ''; }
+    if (!input.files[0]) return;
+    load.disabled = true; load.setAttribute('aria-busy', 'true');
+    try { await open(input.files[0]); } catch (error) { failed(error); }
+    finally { input.value = ''; load.disabled = false; load.removeAttribute('aria-busy'); }
   });
   refresh();
   return { ensureProjectName, markSaved };

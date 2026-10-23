@@ -1,5 +1,5 @@
-const CACHE = 'plane-wave-1.1.3-local';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './palette.js', './preferences.js', './dev-watch.js', './table-layout.js', './exports.js', './export-data.js', './settings.js', './page-controls.js', './field.js', './updates.js', './gratings.js', './grating-geometry.js', './center-squares.js', './linked-rows.js', './numbers.js', './history.js', './framing.js', './persistence.js', './table.js', './viewport.js', './manifest.webmanifest', './icon-192-v110.png', './icon-512-v110.png', './apple-touch-icon-v110.png'];
+const CACHE = 'plane-wave-1.1.4-local';
+const ASSETS = ['./', './index.html', './style.css', './app.js', './palette.js', './preferences.js', './dev-watch.js', './table-layout.js', './exports.js', './export-data.js', './settings.js', './project-import.js', './page-controls.js', './field.js', './updates.js', './gratings.js', './grating-geometry.js', './center-squares.js', './linked-rows.js', './numbers.js', './history.js', './framing.js', './persistence.js', './table.js', './viewport.js', './manifest.webmanifest', './icon-192-v110.png', './icon-512-v110.png', './apple-touch-icon-v110.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
